@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.16)
+project(pothole_capstone LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(gz-sim8 REQUIRED)
+find_package(gz-plugin2 REQUIRED COMPONENTS register)
+add_library(BicycleSystem SHARED simulator/BicycleSystem.cc)
+target_link_libraries(BicycleSystem PRIVATE gz-sim8::gz-sim8 gz-plugin2::register)
+target_compile_options(BicycleSystem PRIVATE -Wall -Wextra)
