@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jaga Jalan · Capstone B-08</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header>
+  <a class="brand" href="/" aria-label="Jaga Jalan"><span class="brand-icon">↗</span><span>jaga<span class="brand-light">jalan</span><small>CAPSTONE B-08 / UGM</small></span></a>
+  <div class="header-center"><span class="live-dot" id="liveDot"></span> <span id="connection">MENGHUBUNGKAN GAZEBO</span><span class="divider">/</span> LAB SIMULASI SEPEDA</div>
+  <div class="header-actions"><button id="sound" class="subtle">♬ Aktifkan suara</button><button id="fullscreen" class="icon-btn" title="Layar penuh">⛶</button><span id="clock">00:00:00</span></div>
+</header>
+<main>
+  <section class="workspace">
+    <div class="intro"><div><p class="eyebrow">DETEKSI & PERINGATAN DINI JALAN RUSAK</p><h1>Satu perjalanan. Tiga lapis informasi.</h1></div><span class="version">GAZEBO HARMONIC <b>3D</b></span></div>
+    <section class="hero panel">
+      <img id="mainCamera" src="/stream/chase" alt="Kamera mengikuti sepeda di lintasan Gazebo">
+      <div class="hero-shade"></div>
+      <div class="hero-top"><div><span class="live-tag">● LIVE</span><span class="location-tag">Lintasan kampus · 150 m</span></div><button id="cameraSwitch" class="glass">↻ Ganti kamera</button></div>
+      <div id="cameraWaiting" class="camera-waiting">Menunggu gambar dari Gazebo…<small>Inisialisasi dunia dan kamera dapat memerlukan 20–40 detik.</small></div>
+      <div id="roadAlert" class="road-alert" hidden><span>△</span><div><strong id="roadAlertTitle">Jalan rusak di depan</strong><small id="roadAlertSub"></small></div></div>
+      <div class="hero-bottom"><div class="speed"><span id="speed">0.0</span><div>km/jam<small id="motion">BERHENTI</small></div></div><div class="ride-coordinates"><span id="gpsText">GPS · menunggu posisi</span><small id="heading">ARAH 090° · TIMUR</small></div></div>
+      <div class="hero-progress"><i id="progress"></i></div>
+    </section>
+    <div class="sensor-grid">
+      <section class="panel vision-panel"><div class="panel-head"><h2><span class="number">01</span> Vision</h2><span id="fps" class="metric-label">— FPS</span></div><div class="vision-view"><img src="/stream/camera" alt="Citra kamera depan dengan kotak deteksi OpenCV"><span id="visionFlag" class="image-tag">MENUNGGU KAMERA</span></div><div class="panel-foot"><span>OpenCV · baseline simulasi</span><span id="latency">— ms / frame</span></div></section>
+      <section class="panel imu-panel"><div class="panel-head"><h2><span class="number">02</span> Respons IMU</h2><span class="metric-label">100 Hz SIM</span></div><div class="imu-reading"><strong id="az">0.00</strong><span>m/s²<small>percepatan vertikal tanpa gravitasi</small></span><span id="imuFlag" class="pill">KALIBRASI</span></div><canvas id="chart" aria-label="Grafik percepatan IMU"></canvas><div class="panel-foot"><span><i class="legend teal"></i> aZ <i class="legend orange"></i> ambang</span><span id="std">σ 0.00 · ΔZ 0.00</span></div></section>
+    </div>
+    <div class="drive-bar panel"><span id="controller">⌨ KEYBOARD</span><div><kbd>W</kbd> kayuh <kbd>A</kbd><kbd>D</kbd> belok <kbd>S</kbd> rem <kbd>SPACE</kbd> berhenti</div><button id="auto" class="subtle">▷ Demo otomatis</button></div>
+  </section>
+  <aside>
+    <section id="alertPanel" class="panel alert-panel"><div class="alert-symbol" id="alertSymbol">✓</div><div><p class="eyebrow">BUZZER & LED</p><h2 id="alertTitle">Menunggu sensor</h2><p id="alertDetail">Aktifkan suara untuk mendengar peringatan.</p></div><span class="led" id="led"></span></section>
+    <section class="panel map-panel"><div class="panel-head"><h2><span class="number">03</span> Peta tersinkron</h2><span class="metric-label" id="cacheCount">0 TITIK</span></div><canvas id="map" aria-label="Peta lokal lintasan, sepeda, dan lokasi kerusakan dari server"></canvas><div class="map-legend"><span><i class="legend teal"></i> Sepeda</span><span><i class="legend orange"></i> Database</span><span>UTARA ↑</span></div><div class="sync-row"><span id="syncStatus">● Menghubungkan server</span><a href="/api/export.csv" download="jalan-rusak.csv">Ekspor CSV ↗</a></div></section>
+    <section class="panel control-panel"><div class="panel-head"><h2>Meja demonstrasi</h2><span class="metric-label">INTERAKTIF</span></div><div class="toggle-grid">
+      <label><span>Vision</span><input id="opt-vision" type="checkbox" checked><i></i></label><label><span>Deteksi IMU</span><input id="opt-imu" type="checkbox" checked><i></i></label>
+      <label><span>Peringatan peta</span><input id="opt-database" type="checkbox" checked><i></i></label><label><span>Jaringan online</span><input id="opt-online" type="checkbox" checked><i></i></label>
+    </div><div class="queue"><span><b id="reports">0</b> laporan IMU</span><span><b id="pending">0</b> antrean lokal</span></div>
+      <div class="scenario-row"><label for="scenario">Mulai dari</label><select id="scenario"><option value="start">Awal lintasan</option><option value="new">A · Lubang baru</option><option value="known">B · Lokasi dari server</option><option value="opposite">B · Lubang di belakang</option><option value="side">B · Lajur sebelah</option><option value="return">B · Mendekat dari arah balik</option><option value="last">D · Uji saat offline</option></select><button id="reset" title="Pindahkan sepeda ke skenario">↻</button></div>
+      <details><summary>Kontrol & validasi lanjutan</summary><label class="plain-check"><input id="opt-fusion" type="checkbox"> Simpan hanya jika IMU + vision (proposal)</label><label class="plain-check"><input id="invertSteer" type="checkbox"> Balik arah stik</label><p class="help">Stik PS: analog kiri = belok; R2 = kayuh; L2 / ✕ = rem; △ = kembali awal. Tekan tombol stik agar browser mengenalinya. Shift + S = mundur.</p><div class="touch-controls"><button data-drive="left">◀</button><button data-drive="forward">▲</button><button data-drive="brake">■</button><button data-drive="right">▶</button></div></details>
+    </section>
+    <section class="panel event-panel"><div class="panel-head"><h2>Jejak sistem</h2><span class="metric-label">REAL-TIME</span></div><div id="events"><p class="empty">Peristiwa sensor dan sinkronisasi muncul di sini.</p></div></section>
+  </aside>
+</main>
+<footer><span><span class="footer-dot"></span> PROTOTIPE VIRTUAL / PAGELARAN DESEMBER 2026</span><span>IMU → simpan koordinat <em>·</em> Vision / database → buzzer</span><span id="health">MEMUAT SENSOR</span></footer>
+<div id="toast" role="status" hidden></div>
+<script src="/app.js"></script>
+</body></html>
