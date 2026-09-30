@@ -1,0 +1,13 @@
+{
+  "origin": {"latitude": -7.7653, "longitude": 110.3725, "altitude": 120.0},
+  "imu": {"sample_rate": 100, "window": 20, "z_threshold": 4.5, "diff_threshold": 3.8, "std_threshold": 1.5, "cooldown": 2.5},
+  "vision": {"max_distance": 3.0, "camera_height": 1.08, "camera_pitch": 0.30, "hfov": 1.20, "dark_threshold": 63, "min_area": 24},
+  "warning": {"radius": 15.0, "corridor": 1.6, "min_speed": 0.35, "lookahead_seconds": 4.0},
+  "sync": {"interval": 2.0, "merge_radius": 2.5},
+  "potholes": [
+    {"name": "A", "x": 24, "y": -2, "rx": 0.90, "ry": 0.68, "depth": 0.12},
+    {"name": "B", "x": 58, "y": -2, "rx": 1.1, "ry": 0.76, "depth": 0.17},
+    {"name": "C", "x": 83, "y": 2, "rx": 0.72, "ry": 0.6, "depth": 0.09},
+    {"name": "D", "x": 115, "y": -2, "rx": 1.25, "ry": 0.8, "depth": 0.15}
+  ]
+}
