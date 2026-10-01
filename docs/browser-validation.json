@@ -1,0 +1,9 @@
+{
+  "javascript": true,
+  "responsive": true,
+  "keyboard": true,
+  "steering": true,
+  "gamepad_api": true,
+  "autopilot": true,
+  "audio_context": true
+}
