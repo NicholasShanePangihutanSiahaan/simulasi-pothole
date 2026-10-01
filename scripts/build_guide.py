@@ -56,7 +56,7 @@ def build():
     story += [Spacer(1,14),para('Jalankan: bash start.sh   ·   Buka: http://localhost:8765','H2ID'),
               para('Klik Aktifkan suara, tunggu kalibrasi, lalu gunakan W/A/S/D atau stik PS.\nPanduan ini mencakup skenario pagelaran, alur data, parameter, dan pemecahan masalah.','SmallID'),
               HRFlowable(width='100%',thickness=1,color=colors.HexColor('#c8d8cf')),Spacer(1,10),
-              para('Edisi 30 September 2026. Berdasarkan proposal C-251 B-08 revisi 01.\nSimulasi memakai Gazebo Harmonic dan detektor OpenCV sebagai baseline; bobot FOMO belum disertakan.','SmallID'),PageBreak()]
+              para('Edisi 1 Oktober 2026. Berdasarkan proposal C-251 B-08 revisi 01.\nSimulasi memakai Gazebo Harmonic dan detektor OpenCV sebagai baseline; bobot FOMO belum disertakan.','SmallID'),PageBreak()]
     story.append(para('Arsitektur demonstrasi','H1ID'))
     d=Drawing(505,230)
     rows=[('IMU + GPS','Simpan lokal','HTTP ke server'),
