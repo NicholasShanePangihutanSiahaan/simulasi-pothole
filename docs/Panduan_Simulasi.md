@@ -60,7 +60,7 @@ Untuk stik PS4/PS5, sambungkan terlebih dahulu melalui USB atau Bluetooth pada s
 
 Analog mempunyai dead zone 12 persen untuk mengurangi gerak karena drift. Jika arah stik terbalik, buka Kontrol & validasi lanjutan dan aktifkan Balik arah stik. Pemetaan R2/L2 mengikuti layout standar browser; dongle atau driver nonstandar dapat memetakan tombol secara berbeda. Pengujian perangkat PS fisik perlu dilakukan pada stik yang akan dipakai di pagelaran.
 
-Saat fokus halaman hilang, tombol dilepas dan rem dikirim. Plugin juga mengerem jika perintah perangkat tidak diterima selama 0,6 detik. Pergantian skenario menahan sepeda selama kalibrasi. Batas lajur demonstrasi berada sekitar y ±6,6 m; batas longitudinal x −2 hingga 144 m. Pengendali mengerem di batas tersebut, tetapi masih ada jarak pengereman.
+Saat fokus halaman hilang, tombol dilepas dan rem dikirim. Plugin juga mengerem jika perintah perangkat tidak diterima selama 0,6 detik. Demo otomatis memerlukan heartbeat browser; bila heartbeat hilang lebih dari 0,8 detik, mode otomatis dihentikan. Pergantian skenario menahan sepeda selama kalibrasi. Batas lajur demonstrasi berada sekitar y ±6,6 m; batas longitudinal x −2 hingga 144 m. Pengendali mengerem di batas tersebut, tetapi masih ada jarak pengereman.
 
 ## 5. Membaca dashboard
 
@@ -196,7 +196,7 @@ Salin folder proyek termasuk kode, konfigurasi, dan dokumentasi. Launcher membua
 
 ## 11. Pengujian dan batas interpretasi
 
-Uji logika dijalankan dengan python3 -s -m pytest -q. Uji integrasi memakai scripts/check_live.py terhadap Gazebo yang aktif, sehingga sepeda benar-benar digerakkan dan laporan benar-benar ditambahkan. Hasil lengkap, termasuk konfigurasi uji dan keterbatasan, ada di Hasil_Pengujian.md.
+Uji logika dijalankan dengan python3 -s -m pytest -q. Hasil akhir: 13 uji logika, delapan pemeriksaan integrasi, dan tujuh pemeriksaan browser lulus. Uji integrasi memakai scripts/check_live.py terhadap Gazebo yang aktif, sehingga sepeda benar-benar digerakkan dan laporan benar-benar ditambahkan. Pada sesi uji, kamera mencapai sekitar 15 FPS dan antrean offline selesai disinkronkan sekitar 1,4 detik setelah jaringan diaktifkan. Hasil lengkap, termasuk konfigurasi uji dan keterbatasan, ada di Hasil_Pengujian.md.
 
 Jangan menyamakan keberhasilan demo dengan pemenuhan target perangkat pada Tabel 6.2. Target sensitivitas IMU ≥80 persen, F1 vision ≥77 persen, response buzzer ≤500 ms, dan umur baterai lima jam memerlukan pengujian perangkat fisik serta dataset yang sesuai. Demo ini belum mengukur keterlambatan sampai speaker nyata, konsumsi energi, akurasi FOMO, atau kondisi cuaca nyata.
 
