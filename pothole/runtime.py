@@ -338,7 +338,7 @@ class Runtime:
             now=time.monotonic()
             return {'pose':dict(self.pose),'gps':dict(self.gps) if self.gps else None,
                 'imu':dict(self.imu),'imu_history':list(self.history),'vision':dict(self.vision),
-                'options':dict(self.options),'buzzer':dict(self.buzzer),'db_warning':self.db_warning,
+                'options':dict(self.options),'control':dict(self.command),'buzzer':dict(self.buzzer),'db_warning':self.db_warning,
                 'storage':self.store.counts(),'potholes':self.store.cached(),'events':list(self.events)[:30],
                 'sync':{'last':self.last_sync,'error':self.sync_error,'ms':self.sync_ms},
                 'health':{'gazebo':now-self.last_odom<1.5,'imu':now-self.last_imu<1.5,
