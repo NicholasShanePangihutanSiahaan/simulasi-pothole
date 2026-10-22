@@ -37,12 +37,16 @@ class BicycleSystem final : public gz::sim::System,
   std::chrono::steady_clock::time_point commandTime{};
   double lastPublish{-1};
   double headingTarget{0};
+  double trackStraight{160}, trackRadius{30}, trackWidth{12};
 
  public:
   void Configure(const gz::sim::Entity &entity,
-      const std::shared_ptr<const sdf::Element> &,
+      const std::shared_ptr<const sdf::Element> &sdf,
       gz::sim::EntityComponentManager &ecm, gz::sim::EventManager &) override {
     model = gz::sim::Model(entity);
+    trackStraight = sdf->Get<double>("track_straight", 160.).first;
+    trackRadius = sdf->Get<double>("track_radius", 30.).first;
+    trackWidth = sdf->Get<double>("track_width", 12.).first;
     frame = gz::sim::Link(model.LinkByName(ecm, "frame"));
     frame.EnableVelocityChecks(ecm);
     steering = model.JointByName(ecm, "steering");
@@ -99,7 +103,11 @@ class BicycleSystem final : public gz::sim::System,
         std::chrono::steady_clock::now() - commandTime).count() > .6;
     const double t = stale ? 0 : throttle;
     double b = stale ? 1 : brake;
-    if (pose.Pos().X() < -2 || pose.Pos().X() > 144 || std::abs(pose.Pos().Y()) > 6.6) b = 1;
+    const double px = pose.Pos().X(), py = pose.Pos().Y();
+    const double trackDistance = px < 0 ? std::abs(std::hypot(px, py-trackRadius)-trackRadius) :
+        px > trackStraight ? std::abs(std::hypot(px-trackStraight, py-trackRadius)-trackRadius) :
+        std::min(std::abs(py), std::abs(py-2*trackRadius));
+    if (trackDistance > trackWidth/2+.6) b = 1;
     const double yaw = pose.Rot().Yaw();
     const double v = worldV.X()*std::cos(yaw) + worldV.Y()*std::sin(yaw);
     const double lateralV = -worldV.X()*std::sin(yaw) + worldV.Y()*std::cos(yaw);
