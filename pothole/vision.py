@@ -24,12 +24,19 @@ class Detector:
         mask[:,:int(w*.10)] = 0
         mask[:,int(w*.90):] = 0
         mask = cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))
+        padded=cv2.copyMakeBorder(mask,1,1,1,1,cv2.BORDER_CONSTANT,value=0)
+        thickness = cv2.distanceTransform(padded,cv2.DIST_L2,5)[1:-1,1:-1]
         contours,_ = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
         detections=[]
         for contour in contours:
             area=cv2.contourArea(contour)
             x,y,bw,bh=cv2.boundingRect(contour)
-            if area<self.cfg['min_area'] or area>w*h*.20 or bw<7 or bh<3 or bw/bh<.7 or bw/bh>10:
+            if area<self.cfg['min_area'] or area>w*h*.20 or bw<7 or bh<12 or bw/bh<.7 or bw/bh>10:
+                continue
+            # A filled depression has a substantial interior. Jagged hairline
+            # cracks can break into short, apparently compact bounding boxes;
+            # reject them by actual stroke thickness, not bounding-box ratio.
+            if thickness[y:y+bh,x:x+bw].max()<4:
                 continue
             u,v=x+bw/2,y+bh/2
             alpha = self.cfg['camera_pitch']+math.atan((v-h/2)/focal)
@@ -41,7 +48,7 @@ class Detector:
                 continue
             # Reject elongated borders and low fill-factor cracks/shadows.
             fill=area/max(1,bw*bh)
-            if fill<.32:
+            if fill<.45:
                 continue
             detections.append({'box':[x,y,bw,bh], 'distance':round(distance,2),
                                'area':int(area), 'score':round(min(.99,.50+fill*.4),2)})
