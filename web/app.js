@@ -14,7 +14,15 @@ $('cameraSwitch').onclick=()=>{mainView=mainView==='chase'?'camera':'chase';$('m
 $('auto').onclick=()=>safely(post('/api/options',{autopilot:!state?.options.autopilot}));
 function reset(scenario){safely(post('/api/reset',{scenario}));keys.clear();touch.clear();toast('Posisi dipindahkan. Tunggu kalibrasi IMU 2 detik.');}
 $('reset').onclick=()=>reset($('scenario').value);
-for(const option of ['vision','imu','database','online','fusion'])$('opt-'+option).onchange=e=>safely(post('/api/options',{[option]:e.target.checked}));
+for(const [value,label] of [['small','C · Pothole kecil / lajur kiri'],['crack','Retakan · bukan pothole'],['bump','Polisi tidur · bukan pothole'],['paving','Paving blok · 60 m'],['curve','Tikungan arena oval']])$('scenario').add(new Option(label,value));
+$('resetDatabase').onclick=async()=>{
+  stopInput();
+  if(!confirm('Reset semua temuan pothole?\nDatabase server, cache, dan antrean IMU akan dikosongkan. Lubang fisik tetap ada untuk ditemukan ulang. Cadangan otomatis disimpan.')){focused=document.hasFocus();return;}
+  const button=$('resetDatabase');button.disabled=true;
+  try{await post('/api/database/reset',{confirm:'RESET POTHOLE DATABASE'});toast('Database kosong. Tunggu kalibrasi 2 detik, lalu temukan pothole kembali.');}
+  catch(e){toast(e.message);}finally{button.disabled=false;focused=document.hasFocus();}
+};
+for(const option of ['vision','imu','database','online'])$('opt-'+option).onchange=e=>safely(post('/api/options',{[option]:e.target.checked}));
 const driveKeys=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ']);
 window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'].includes(e.target.tagName))return;const k=e.key.toLowerCase();if(driveKeys.has(k)){e.preventDefault();keys.add(k);if(e.shiftKey)keys.add('shift');}if(!e.repeat&&k==='r')reset('start');if(!e.repeat&&k==='p')$('auto').click();});
 window.addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(!e.shiftKey)keys.delete('shift');});
@@ -52,7 +60,20 @@ setInterval(async()=>{
 },100);
 function fit(canvas){const d=window.devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==w*d||canvas.height!==h*d){canvas.width=w*d;canvas.height=h*d;}const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);return {c,w,h};}
 function drawChart(s){const {c,w,h}=fit($('chart'));const data=s.imu_history;const max=Math.max(7,...data.map(p=>Math.abs(p[1])))*1.1;const y=v=>h/2-v/max*(h/2-9);c.strokeStyle='#33453e';c.lineWidth=.7;for(const v of [-max/2,0,max/2]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([3,4]);c.strokeStyle='#967844';for(const v of [-s.config.imu.z_threshold,s.config.imu.z_threshold]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([]);if(data.length>1){const t=data[data.length-1][0],span=4.5;c.beginPath();let started=false;for(const p of data){const x=w-(t-p[0])/span*w;if(x<0)continue;if(!started){c.moveTo(x,y(p[1]));started=true;}else c.lineTo(x,y(p[1]));}c.strokeStyle='#83d2b3';c.lineWidth=1.6;c.stroke();}c.fillStyle='#7f9b8c';c.font='8px monospace';c.fillText('+'+max.toFixed(0),5,10);c.fillText('−'+max.toFixed(0),5,h-3);}
-function drawMap(s){const {c,w,h}=fit($('map'));const mx=x=>15+(x+2)/148*(w-30),my=y=>h/2-y*4;for(let x=0;x<w;x+=20){c.strokeStyle='#23332b';c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}c.fillStyle='#33453d';c.fillRect(mx(0),my(5.7),mx(144)-mx(0),45.6);c.strokeStyle='#83916f';c.setLineDash([6,6]);c.beginPath();c.moveTo(mx(0),my(0));c.lineTo(mx(144),my(0));c.stroke();c.setLineDash([]);c.fillStyle='#70877a';c.font='7px monospace';for(let x=0;x<=140;x+=20)c.fillText(x+'m',mx(x)-6,h-6);for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#f5b75a22';c.beginPath();c.arc(mx(x),my(y),9,0,Math.PI*2);c.fill();c.fillStyle='#f5b75a';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#9be7c4';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();}
+function drawMap(s){
+  const {c,w,h}=fit($('map')),t=s.config.track,r=t.radius,l=t.straight;
+  const scale=Math.min((w-30)/(l+2*r+16),(h-35)/(2*r+16));
+  const mx=x=>w/2+(x-l/2)*scale,my=y=>h/2-(y-r)*scale;
+  function stadium(){c.beginPath();c.moveTo(mx(0),my(0));c.lineTo(mx(l),my(0));c.arc(mx(l),my(r),r*scale,Math.PI/2,-Math.PI/2,true);c.lineTo(mx(0),my(2*r));c.arc(mx(0),my(r),r*scale,-Math.PI/2,Math.PI/2,true);c.closePath();}
+  stadium();c.strokeStyle='#43534c';c.lineWidth=t.width*scale;c.stroke();
+  stadium();c.strokeStyle='#9b9b71';c.lineWidth=.7;c.setLineDash([3,4]);c.stroke();c.setLineDash([]);
+  const surface=s.config.surfaces;
+  c.strokeStyle='#b3a28b';c.lineWidth=t.width*scale;c.beginPath();c.moveTo(mx(l-surface.paving_start),my(2*r));c.lineTo(mx(l-surface.paving_start-surface.paving_length),my(2*r));c.stroke();
+  c.strokeStyle='#f0c35e';c.lineWidth=3;c.beginPath();c.moveTo(mx(surface.bump_x),my(-5));c.lineTo(mx(surface.bump_x),my(5));c.stroke();
+  c.fillStyle='#a8b9ac';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
+  for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#f5b75a';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}
+  c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#9be7c4';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();
+}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let lastEventKey='';
 function render(s){
@@ -63,10 +84,11 @@ function render(s){
   const heading=(90-s.pose.yaw*180/Math.PI+360)%360;
   $('heading').textContent='ARAH '+heading.toFixed(0).padStart(3,'0')+'° · '+['UTARA','TIMUR','SELATAN','BARAT'][Math.round(heading/90)%4];
   $('gpsText').textContent=s.gps?s.gps.latitude.toFixed(6)+' / '+s.gps.longitude.toFixed(6):'GPS · menunggu posisi';
-  $('progress').style.width=Math.max(0,Math.min(100,s.pose.x/144*100))+'%';
+  $('progress').style.width=(100*s.track_progress)+'%';
+  $('trackLabel').textContent='Arena oval · '+s.config.track.length.toFixed(0)+' m / putaran';
   $('fps').textContent=s.vision.fps.toFixed(1)+' FPS';$('latency').textContent=s.vision.latency_ms.toFixed(1)+' ms / frame';
   $('visionFlag').textContent=!s.options.vision?'VISION NONAKTIF':s.vision.detections.length?'DUGAAN LUBANG TERDETEKSI':'TIDAK ADA DETEKSI';$('visionFlag').classList.toggle('warn',s.vision.detections.length>0);
-  $('az').textContent=s.imu.z.toFixed(2);$('imuFlag').textContent=s.imu.calibrating?'KALIBRASI':s.imu.triggered?'ANOMALI':'MEMANTAU';$('std').textContent='σ '+s.imu.std.toFixed(2)+' · ΔZ '+s.imu.diff.toFixed(2);
+  $('az').textContent=s.imu.z.toFixed(2);$('imuFlag').textContent=s.imu.calibrating?'KALIBRASI':s.imu.triggered?'POTHOLE':s.imu.classification==='candidate'?'UJI POLA':'MEMANTAU';$('std').textContent='σ '+s.imu.std.toFixed(2)+' · ΔZ '+s.imu.diff.toFixed(2);
   const warn=s.buzzer.active;
   $('alertPanel').classList.toggle('warning',warn);$('alertSymbol').textContent=warn?'!':'✓';
   $('alertTitle').textContent=warn?'Waspada jalan rusak':healthy?'Tidak ada peringatan':'Menunggu sensor';
@@ -75,7 +97,7 @@ function render(s){
   if(warn)beep();
   $('cacheCount').textContent=s.storage.cached+' TITIK';$('reports').textContent=s.storage.total_reports;$('pending').textContent=s.storage.pending;
   $('syncStatus').textContent=!s.options.online?'● Offline · cache tetap aktif':s.sync.error?'● Server belum tersambung':'● Sinkron · '+s.sync.ms.toFixed(0)+' ms';
-  for(const option of ['vision','imu','database','online','fusion']){const input=$('opt-'+option);if(document.activeElement!==input)input.checked=s.options[option];}
+  for(const option of ['vision','imu','database','online']){const input=$('opt-'+option);if(document.activeElement!==input)input.checked=s.options[option];}
   $('auto').classList.toggle('active',s.options.autopilot);$('auto').textContent=s.options.autopilot?'Ⅱ Hentikan demo':'▷ Demo otomatis';
   $('health').textContent=Object.entries(s.health).map(([k,v])=>k.toUpperCase()+' '+(v?'●':'○')).join('  ');
   const key=s.events[0]?.wall+':'+s.events.length;
