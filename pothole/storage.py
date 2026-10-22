@@ -10,6 +10,7 @@ from .core import distance_m
 
 class Store:
     def __init__(self, path):
+        self.path=Path(path)
         Path(path).parent.mkdir(parents=True,exist_ok=True)
         self.db=sqlite3.connect(path,check_same_thread=False)
         self.db.row_factory=sqlite3.Row
@@ -20,7 +21,32 @@ class Store:
             CREATE TABLE IF NOT EXISTS cache (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS hazards (id TEXT PRIMARY KEY, latitude REAL NOT NULL, longitude REAL NOT NULL, observations INTEGER NOT NULL, peak REAL NOT NULL, updated_at REAL NOT NULL, source TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS received (event_id TEXT PRIMARY KEY, hazard_id TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         ''')
+
+    def get_meta(self,key):
+        with self.lock:
+            row=self.db.execute('SELECT value FROM metadata WHERE key=?',(key,)).fetchone()
+            return row[0] if row else None
+
+    def set_meta(self,key,value):
+        with self.lock,self.db:
+            self.db.execute('INSERT OR REPLACE INTO metadata VALUES(?,?)',(key,str(value)))
+
+    def backup(self):
+        folder=self.path.parent/'backups'
+        folder.mkdir(parents=True,exist_ok=True)
+        path=folder/f'{self.path.stem}-{time.strftime("%Y%m%d-%H%M%S")}-{uuid.uuid4().hex[:8]}.sqlite3'
+        with self.lock,sqlite3.connect(path) as destination:
+            self.db.backup(destination)
+        return str(path.resolve())
+
+    def clear(self):
+        """Preserve metadata so resetting a demo never re-seeds it on restart."""
+        with self.lock,self.db:
+            for table in ('reports','cache','hazards','received'):
+                self.db.execute(f'DELETE FROM {table}')
+            self.db.execute("INSERT OR REPLACE INTO metadata VALUES('seed_initialized','1')")
 
     def add_report(self, report):
         report=dict(report,event_id=report.get('event_id',str(uuid.uuid4())))
