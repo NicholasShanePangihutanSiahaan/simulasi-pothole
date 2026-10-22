@@ -37,7 +37,9 @@ Pengujian memakai Gazebo Harmonic headless, Python sistem, dan server uji terpis
 
 ## Browser dan restart
 
-**8 pemeriksaan browser lulus** melalui Chromium/Playwright: JavaScript tanpa error, tata letak responsif, keyboard, kemudi, pemetaan Gamepad API sintetis, autopilot beserta heartbeat/berhenti saat blur, AudioContext, serta tombol reset database. Pembatalan dialog mempertahankan data; konfirmasi mengosongkan data. Bukti ringkas berada di `browser-validation.json`; tangkapan layar desktop dan mobile berada di `images/`.
+**11 pemeriksaan browser lulus** melalui Chromium/Playwright: JavaScript tanpa error, tata letak responsif, keyboard, kemudi, penyimpanan/reset setelan kemudi, pengaruh sensitivitas, pengaruh laju respons, pemetaan Gamepad API sintetis, autopilot beserta heartbeat/berhenti saat blur, AudioContext, serta tombol reset database. Pembatalan dialog mempertahankan data; konfirmasi mengosongkan data. Bukti ringkas berada di `browser-validation.json`; tangkapan layar desktop dan mobile berada di `images/`.
+
+Pengukuran input keyboard kiri penuh membuktikan slider diterapkan pada perintah backend: sensitivitas 20% menghasilkan `steer=0,200`, sedangkan 100% menghasilkan `steer=1,000`. Pada sensitivitas yang sama, 250 ms setelah tombol ditekan, respons 10% baru mencapai `steer=0,133`, sedangkan respons 100% mencapai `steer=0,700`. Jadi sensitivitas benar-benar mengubah batas sudut, sementara respons mengubah laju menuju batas tersebut.
 
 Setelah reset dari tombol, launcher dihentikan lalu dijalankan lagi memakai folder data yang sama **tanpa --no-seed**. Sesi restart berjalan 18 detik lalu berhenti normal. Database device/server tetap memiliki 0 laporan, 0 cache, 0 hazard, dan 0 received; marker seed_initialized tetap 1. Titik contoh B tidak dimuat ulang. Semua proses uji sudah dihentikan.
 
