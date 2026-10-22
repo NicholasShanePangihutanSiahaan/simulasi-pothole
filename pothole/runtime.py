@@ -25,6 +25,7 @@ from gz.msgs10.twist_pb2 import Twist
 from .core import ImuDetector, GPSHistory, nearby_warning, quaternion_euler, to_xy, vertical_acceleration
 from .storage import Store
 from .vision import Detector
+from .track import length as track_length, point as track_point, project as track_project
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -39,6 +40,7 @@ class Runtime:
         self.store=Store(data)
         self.server_url=server_url.rstrip('/')
         self.lock=threading.RLock()
+        self.sync_lock=threading.RLock()
         self.stop=threading.Event()
         self.node=Node()
         self.control_pub=self.node.advertise('/capstone/control',Twist)
@@ -53,7 +55,7 @@ class Runtime:
         self.gps=None
         self.imu={'z':0,'raw_z':0,'diff':0,'std':0,'calibrating':True,'triggered':False}
         self.vision={'detections':[],'fps':0.,'latency_ms':0.,'algorithm':self.vision_detector.name}
-        self.options={'online':True,'vision':True,'imu':True,'database':True,'fusion':False,'autopilot':False}
+        self.options={'online':True,'vision':True,'imu':True,'database':True,'autopilot':False}
         self.command={'throttle':0.,'steer':0.,'brake':1.}
         self.last_input=0
         self.last_client=0
@@ -104,15 +106,12 @@ class Runtime:
         t=stamp(msg)
         with self.lock:
             self.last_imu=time.monotonic()
-            self.imu=self.detector.update(t,z,self.pose['speed'])
+            self.imu=self.detector.update(t,z,self.pose['speed'],quaternion_euler(msg.orientation)[1])
             self.history.append([round(t,3),round(self.imu['z'],3)])
             if self.imu['triggered'] and self.options['imu']:
-                if self.options['fusion'] and t-self.last_vision_detection>2.0:
-                    self.event('IMU','Guncangan tanpa konfirmasi vision; mode validasi ganda menahan laporan.','info')
-                else:
-                    self.pending_fixes.append({'time':t,'peak':self.imu['peak'],
-                        'std':self.imu['std'],'source':'imu+vision' if t-self.last_vision_detection<=2 else 'imu',
-                        'wall':time.monotonic(),'timestamp':time.time(),'speed':self.pose['speed']})
+                self.pending_fixes.append({'time':self.imu.get('event_time',t),'peak':self.imu['peak'],
+                    'std':self.imu['std'],'source':'imu','classification':'pothole',
+                    'wall':time.monotonic(),'timestamp':time.time(),'speed':self.pose['speed']})
 
     def on_gps(self,msg):
         t=stamp(msg)
@@ -131,7 +130,7 @@ class Runtime:
                     payload={k:v for k,v in report.items() if k!='wall'}
                     payload.update(fix,device='sepeda-demo-01')
                     self.store.add_report(payload)
-                    self.event('IMU',f"Anomali tersimpan lokal · {fix['latitude']:.6f}, {fix['longitude']:.6f} · |az| {report['peak']:.1f} m/s²",'imu')
+                    self.event('IMU',f"Pothole tersimpan lokal · {fix['latitude']:.6f}, {fix['longitude']:.6f} · |az| {report['peak']:.1f} m/s²",'imu')
                 elif time.monotonic()-report['wall']<2:
                     remaining.append(report)
                 else:
@@ -204,7 +203,11 @@ class Runtime:
 
     def reset(self,scenario):
         presets={'start':(4,-2,0),'new':(16,-2,0),'known':(44,-2,0),'opposite':(63,-2,0),
-                 'return':(64,-2,math.pi),'side':(46,2,0),'last':(106,-2,0)}
+                 'return':(64,-2,math.pi),'side':(46,2,0),'last':(106,-2,0),
+                 'small':(76,2,0),'crack':(33,-2,0),'bump':(86,-2,0),
+                 'paving':(self.cfg['track']['straight']-self.cfg['surfaces']['paving_start']+8,
+                           2*self.cfg['track']['radius']+2,math.pi),
+                 'curve':(150,-2,0)}
         if scenario not in presets:
             raise ValueError('Skenario tidak dikenal')
         x,y,yaw=presets[scenario]
@@ -227,6 +230,29 @@ class Runtime:
         self.reset_pub.publish(msg)
         self.event('SKENARIO',f'Posisi {scenario}; tunggu kalibrasi 2 detik. Database tetap tersimpan.','info')
 
+    def reset_database(self,confirm):
+        if confirm!='RESET POTHOLE DATABASE':
+            raise ValueError('Konfirmasi reset database diperlukan')
+        # One exhibit device: stop new fixes and serialize reset with the entire
+        # upload/download cycle, so an in-flight sync cannot resurrect old rows.
+        with self.sync_lock,self.lock:
+            self.options['autopilot']=False
+            self.command={'throttle':0.,'steer':0.,'brake':1.}
+            local_backup=self.store.backup()
+            req=Request(self.server_url+'/api/database/reset',
+                data=json.dumps({'confirm':confirm}).encode(),headers={'Content-Type':'application/json'})
+            with urlopen(req,timeout=5) as response:
+                result=json.load(response)
+            self.store.clear()
+            self.pending_fixes.clear()
+            self.db_warning=None
+            self.detector.reset()
+            self.history.clear()
+            self.last_sync=time.time()
+            self.sync_error=''
+            self.event('DATABASE','Database server, cache, dan antrean IMU dikosongkan. Cadangan dibuat; posisi lubang fisik tidak berubah.','sync')
+            return {'ok':True,'backups':{'device':local_backup,'server':result['backup']}}
+
     def control_loop(self):
         last_sources=[]
         while not self.stop.wait(.05):
@@ -236,15 +262,16 @@ class Runtime:
                 if self.options['autopilot'] and now-self.last_client>.8:
                     self.options['autopilot']=False
                 if self.options['autopilot'] and now-self.last_odom<1 and not self.imu['calibrating']:
-                    # Exhibit assist follows the straight demonstration lane, no world hazards.
+                    # Follow only the stadium geometry, never the pothole list.
                     yaw=self.pose['yaw']
-                    target=math.atan2((-2-self.pose['y'])*.7,4)
+                    track=self.cfg['track']
+                    s=track_project(self.pose['x'],self.pose['y'],track)
+                    tx,ty,_=track_point(s+5,track,track['lane'])
+                    target=math.atan2(ty-self.pose['y'],tx-self.pose['x'])
                     error=math.atan2(math.sin(target-yaw),math.cos(target-yaw))
+                    curvature=2*math.sin(error)/max(1,math.hypot(tx-self.pose['x'],ty-self.pose['y']))
                     cmd={'throttle':max(-.4,min(1,(3-self.pose['speed'])*.8+.12)),
-                         'steer':max(-1,min(1,error*1.8)),'brake':0.}
-                    if self.pose['x']>136:
-                        self.options['autopilot']=False
-                        cmd={'throttle':0,'steer':0,'brake':1}
+                         'steer':max(-1,min(1,math.atan(1.16*curvature)/.48)),'brake':0.}
                 elif now-self.last_input>.5 or self.imu['calibrating']:
                     cmd={'throttle':0,'steer':0,'brake':1}
                 msg=Twist()
@@ -275,6 +302,12 @@ class Runtime:
 
     def sync_loop(self):
         while not self.stop.is_set():
+            with self.sync_lock:
+                self.sync_once()
+            self.stop.wait(self.cfg['sync']['interval'])
+
+    def sync_once(self):
+        if not self.stop.is_set():
             with self.lock:
                 online=self.options['online']
             if online:
@@ -299,7 +332,6 @@ class Runtime:
                 except (URLError,OSError,ValueError,KeyError) as exc:
                     with self.lock:
                         self.sync_error=str(exc)
-            self.stop.wait(self.cfg['sync']['interval'])
 
     def state(self):
         with self.lock:
@@ -311,7 +343,10 @@ class Runtime:
                 'sync':{'last':self.last_sync,'error':self.sync_error,'ms':self.sync_ms},
                 'health':{'gazebo':now-self.last_odom<1.5,'imu':now-self.last_imu<1.5,
                           'gps':now-self.last_gps<1.5,'camera':now-self.last_camera<1.5},
-                'config':{'origin':self.cfg['origin'],'imu':self.cfg['imu'],'warning':self.cfg['warning']}}
+                'track_progress':track_project(self.pose['x'],self.pose['y'],self.cfg['track'])/track_length(self.cfg['track']),
+                'config':{'origin':self.cfg['origin'],'imu':self.cfg['imu'],'warning':self.cfg['warning'],
+                          'track':dict(self.cfg['track'],length=track_length(self.cfg['track'])),
+                          'surfaces':self.cfg['surfaces']}}
 
     def close(self):
         self.stop.set()
