@@ -2,6 +2,7 @@
 """Generate local Gazebo assets. No Fuel downloads or internet during the show."""
 import json
 import math
+import sys
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -12,6 +13,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "generated"
 ASSETS = OUT / "assets"
 CFG = json.loads((ROOT / "config/demo.json").read_text())
+sys.path.insert(0, str(ROOT))
+from pothole.track import length as track_length, point as track_point
 
 
 def material(color):
@@ -81,11 +84,16 @@ def dae(path, points, faces, uv=None, texture=None, color="0.16 0.17 0.18 1"):
 </mesh></geometry></library_geometries><library_visual_scenes><visual_scene id="scene"><node id="road"><instance_geometry url="#mesh"><bind_material><technique_common><instance_material symbol="mat" target="#mat"><bind_vertex_input semantic="UV" input_semantic="TEXCOORD" input_set="0"/></instance_material></technique_common></bind_material></instance_geometry></node></visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>''')
 
 
-def road_tile(label, x0, x1, hole=None):
-    nx, ny = (61, 121) if hole else (2, 2)
+def road_tile(label, x0, x1, hole=None, surface='asphalt'):
+    nx, ny = (61, 121) if hole else ((601, 2) if surface=='paving' else (61, 2) if surface=='bump' else (2, 2))
     xs, ys = np.linspace(x0, x1, nx), np.linspace(-6, 6, ny)
     points, uvs = [], []
     def depression(x, y):
+        if surface=='bump':
+            return CFG['surfaces']['bump_height'] * np.sin(np.pi*(x-x0)/(x1-x0))**2 + np.zeros_like(y)
+        if surface=='paving':
+            # Small physical joints, not pothole-sized depressions.
+            return -.003 * np.maximum(0, np.cos(2*np.pi*(x-x0)/.4))**12 * np.minimum(1, np.minimum(x-x0,x1-x))*np.ones_like(x+y)
         if not hole:
             return np.zeros_like(x+y, dtype=float)
         dx, dy = (x-hole['x'])/hole['rx'], (y-hole['y'])/hole['ry']
@@ -109,9 +117,34 @@ def road_tile(label, x0, x1, hole=None):
     depth = depression(xx, yy)
     grey = 107 + noise - np.clip(-depth*900, 0, 79)
     rgb = np.stack((grey*.94, grey*.97, grey), axis=-1).clip(0,255).astype('uint8')
+    if surface=='paving':
+        # Running-bond blocks: 40 x 25 cm, light joints deliberately distinct from holes.
+        row=np.floor((yy+6)/.25)
+        joint=(np.mod(yy+6,.25)<.018) | (np.mod(xx-x0+(row%2)*.2,.4)<.018)
+        shade=158+noise+8*np.sin(np.floor((xx-x0+(row%2)*.2)/.4)*7+row*13)
+        shade=np.where(joint,94,shade)
+        rgb=np.stack((shade,shade*.94,shade*.85),axis=-1).clip(0,255).astype('uint8')
+    elif surface=='bump':
+        stripe=(np.floor((yy+6)/.7)%2)==0
+        rgb[stripe]=np.array([225,179,55],dtype='uint8')
+        rgb[~stripe]=np.array([95,96,96],dtype='uint8')
+    elif surface=='crack':
+        # Narrow branching hairline cracks, not dark filled pothole silhouettes.
+        line=CFG['surfaces']['crack_x']+.15*np.sin(yy*5)+.08*np.sin(yy*13)
+        mask=(np.abs(xx-line)<.025) | ((yy>-2)&(yy<2)&(np.abs(xx-line-.5*(yy+2))<.018))
+        rgb[mask]=[46,47,48]
     Image.fromarray(rgb).save(ASSETS/f'{label}.png')
     dae(ASSETS/f'{label}.dae', points, faces, uvs, f'{label}.png')
     result = mesh(label, f'{label}.dae')
+    if surface=='paving':
+        # Primitive block contacts avoid triangle-edge chatter that can generate
+        # 20+ m/s² artefacts on a merely 3 mm joint. Narrow gaps are bridged by
+        # the tyre; the detailed running-bond pattern remains in the visual mesh.
+        for i,start in enumerate(np.arange(x0,x1,.4)):
+            result += collision_box(f'{label}_block_{i}',start+.004,min(start+.396,x1),-6,6)
+        return result
+    if surface=='bump':
+        return mesh(label, f'{label}.dae', True)
     if not hole:
         return result+collision_box(label+'_flat',x0,x1,-6,6)
     # Keep flat adjacent lanes as primitive boxes. Dense coplanar mesh triangles
@@ -201,47 +234,81 @@ def bicycle():
         result += f'<link name="{label}_wheel"><pose>{x} 0 -.37 0 0 0</pose>'+inertia(1.2,.08,.15,.08)+visuals
         result += '<collision name="tire_contact"><pose>0 0 0 1.5707963 0 0</pose><geometry><cylinder><radius>.35</radius><length>.055</length></cylinder></geometry><surface><friction><ode><mu>.9</mu><mu2>.9</mu2></ode></friction></surface></collision></link>'
         result += f'<joint name="{label}_axle" type="revolute"><parent>{parent}</parent><child>{label}_wheel</child><axis><xyz>0 1 0</xyz><dynamics><damping>.015</damping></dynamics></axis></joint>'
-    return result+'<plugin filename="BicycleSystem" name="capstone::BicycleSystem"/></model>'
+    track=CFG['track']
+    return result+f'<plugin filename="BicycleSystem" name="capstone::BicycleSystem"><track_straight>{track["straight"]}</track_straight><track_radius>{track["radius"]}</track_radius><track_width>{track["width"]}</track_width></plugin></model>'
+
+
+def ribbon(label, start, end, offset, width, color, collision=False, z=.006):
+    count=max(2,int((end-start)/.6)+1)
+    points=[]
+    for s in np.linspace(start,end,count):
+        for d in (offset-width/2,offset+width/2):
+            x,y,_=track_point(float(s),CFG['track'],d)
+            points.append((x,y,z))
+    faces=[]
+    for i in range(count-1):
+        a=2*i
+        faces.extend([(a,a+2,a+1),(a+1,a+2,a+3)])
+    dae(ASSETS/f'{label}.dae',points,faces,color=color)
+    return mesh(label,f'{label}.dae',collision)
 
 
 def generate():
     ASSETS.mkdir(parents=True, exist_ok=True)
     tire_mesh()
     road = ''
-    cursor = -8
-    for hole in CFG['potholes']:
-        x0, x1 = hole['x']-2, hole['x']+2
-        road += road_tile('road_'+hole['name'], cursor,x0)
-        road += road_tile('hole_'+hole['name'],x0,x1,hole)
+    track,surf=CFG['track'],CFG['surfaces']
+    straight,radius=track['straight'],track['radius']
+    total=track_length(track)
+    assert 0<surf['paving_length']<total/2
+    cursor = 0
+    sections=[(h['x']-2,h['x']+2,'hole_'+h['name'],h,'asphalt') for h in CFG['potholes']]
+    sections += [(surf['crack_x']-2,surf['crack_x']+2,'cracks',None,'crack'),
+                 (surf['bump_x']-surf['bump_length']/2,surf['bump_x']+surf['bump_length']/2,'speed_bump',None,'bump')]
+    for x0,x1,label,hole,surface in sorted(sections):
+        road += road_tile('before_'+label,cursor,x0)
+        road += road_tile(label,x0,x1,hole,surface)
         cursor = x1
-    road += road_tile('road_end',cursor,155)
-    road += box('ground',(72,0,-.40),(200,140,.25),'0.28 0.40 0.20',True)
-    for y in (-6.7,6.7):
-        road += box('sidewalk'+str(y),(73,y,.04),(166,1.35,.12),'0.57 0.58 0.54',True)
-        road += box('edge'+str(y),(73,math.copysign(5.8,y),.004),(166,.10,.008),'0.86 0.86 0.77')
-    for i,x in enumerate(range(-5,154,6)):
-        road += box('dash'+str(i),(x,0,.005),(2.8,.10,.01),'0.94 0.83 0.42')
+    road += road_tile('road_end',cursor,straight)
+    p0=surf['paving_start'];p1=p0+surf['paving_length']
+    upper=road_tile('upper_start',0,p0)+road_tile('paving',p0,p1,surface='paving')+road_tile('upper_end',p1,straight)
+    road += ribbon('right_turn',straight,straight+math.pi*radius,0,12,'0.39 0.40 0.42 1',True,0)
+    road += ribbon('left_turn',2*straight+math.pi*radius,total,0,12,'0.39 0.40 0.42 1',True,0)
+    road += box('ground',(straight/2,radius,-.40),(straight+2*radius+80,2*radius+100,.25),'0.28 0.40 0.20',True)
+    for side in (-1,1):
+        road += ribbon('edge_'+str(side),0,total,side*5.8,.12,'0.90 0.90 0.81 1')
+        road += ribbon('walk_'+str(side),0,total,side*6.8,1.25,'0.57 0.58 0.54 1',False,.025)
+    for i,s in enumerate(np.arange(0,total,6)):
+        road += ribbon('dash_'+str(i),s,min(s+2.8,total),0,.10,'0.94 0.83 0.42 1')
+    for i in range(12):
+        road += box('start_line'+str(i),(4,-5.5+i,.01),(.45,.95,.015),'0.9 0.9 0.85' if i%2 else '0.12 0.13 0.14')
     scenery = ''
     rng = np.random.default_rng(17)
     for i,x in enumerate(range(-4,153,12)):
         for side in (-1,1):
-            y = side*9.5
+            y = -10 if side<0 else 2*radius+10
             name = f'{i}_{side}'
             scenery += tube('trunk'+name,(x,y,-.2),(x,y,3.8),.19,'0.28 0.19 0.12')
             scenery += sphere('crown'+name,(x,y,4.2),1.8,'0.15 0.34 0.15')
             scenery += sphere('crown2'+name,(x+.8,y,5),1.25,'0.22 0.43 0.19')
             if i%2==0:
-                lx,ly=x+4,side*7.5
+                lx,ly=x+4,(-8 if side<0 else 2*radius+8)
                 scenery += tube('pole'+name,(lx,ly,0),(lx,ly,5.5),.055,'0.21 0.25 0.27')
                 scenery += tube('arm'+name,(lx,ly,5.5),(lx,ly-side*1,5.7),.05,'0.21 0.25 0.27')
                 scenery += box('lamp'+name,(lx,ly-side*1,5.7),(.6,.25,.09),'0.82 0.85 0.79')
             h=float(rng.uniform(5,10))
             color=['0.68 0.67 0.59','0.66 0.53 0.42','0.66 0.71 0.70'][i%3]
-            scenery += box('building'+name,(x,side*18,h/2-.2),(8,9,h),color)
-            scenery += box('roof'+name,(x,side*18,h-.1),(8.4,9.4,.28),'0.31 0.24 0.21')
+            by=-20 if side<0 else 2*radius+20
+            scenery += box('building'+name,(x,by,h/2-.2),(8,9,h),color)
+            scenery += box('roof'+name,(x,by,h-.1),(8.4,9.4,.28),'0.31 0.24 0.21')
             for wx in (-2.5,0,2.5):
                 for level in range(1,int(h/2)):
-                    scenery += box(f'window{name}_{wx}_{level}',(x+wx,side*13.48,level*2),(1.15,.04,1.1),'0.20 0.34 0.39')
+                    scenery += box(f'window{name}_{wx}_{level}',(x+wx,by-side*4.52,level*2),(1.15,.04,1.1),'0.20 0.34 0.39')
+    # Open central lawn and sports markings make the closed stadium layout readable.
+    for i,y in enumerate((18,42)):
+        scenery += box('field_line'+str(i),(80,y,-.265),(110,.12,.012),'0.85 0.87 0.78')
+    for i,x in enumerate((25,80,135)):
+        scenery += box('field_cross'+str(i),(x,30,-.265),(.12,24,.012),'0.85 0.87 0.78')
     origin=CFG['origin']
     plugins=''.join(f'<plugin filename="gz-sim-{file}-system" name="gz::sim::systems::{name}"/>' for file,name in [('physics','Physics'),('user-commands','UserCommands'),('scene-broadcaster','SceneBroadcaster'),('imu','Imu'),('navsat','NavSat')])
     text=f'''<?xml version="1.0"?><sdf version="1.9"><world name="capstone">
@@ -252,7 +319,7 @@ def generate():
     <scene><ambient>.7 .7 .7 1</ambient><background>.62 .77 .87 1</background><shadows>true</shadows><grid>false</grid></scene>
     <light type="directional" name="sun"><pose>0 0 30 0 0 0</pose><diffuse>.95 .91 .82 1</diffuse><specular>.15 .15 .15 1</specular><direction>-.4 -.2 -1</direction><cast_shadows>true</cast_shadows></light>
     <gui fullscreen="false"><plugin filename="MinimalScene" name="3D View"><gz-gui><title>Lintasan Capstone B-08</title><property type="bool" key="showTitleBar">false</property><property type="string" key="state">docked</property></gz-gui><engine>ogre2</engine><scene>scene</scene><ambient_light>.7 .7 .7</ambient_light><background_color>.62 .77 .87</background_color><camera_pose>-4 -10 7 0 .35 .55</camera_pose></plugin><plugin filename="GzSceneManager" name="Scene Manager"/><plugin filename="InteractiveViewControl" name="View Control"/><plugin filename="CameraTracking" name="Camera Tracking"/><plugin filename="WorldControl" name="World Control"><gz-gui><property type="string" key="state">floating</property></gz-gui><start_paused>false</start_paused></plugin></gui>
-    <model name="road"><static>true</static><link name="surface">{road}</link></model>
+    <model name="road"><static>true</static><link name="surface">{road}</link><link name="upper"><pose>{straight} {2*radius} 0 0 0 {math.pi}</pose>{upper}</link></model>
     <model name="campus"><static>true</static><link name="scenery">{scenery}</link></model>
     {bicycle()}</world></sdf>'''
     ET.fromstring(text)
