@@ -14,7 +14,8 @@ from urllib.request import Request, urlopen
 def main():
     p=argparse.ArgumentParser()
     p.add_argument('--url',default='http://127.0.0.1:8765')
-    p.add_argument('--scenario',default='new',choices=['new','known','side','opposite','return','last'])
+    p.add_argument('--scenario',default='new',choices=['start','new','known','small','side','opposite','return','last','crack','bump','paving','curve'])
+    p.add_argument('--auto',action='store_true')
     p.add_argument('--offline',action='store_true')
     p.add_argument('--vision-off',action='store_true')
     p.add_argument('--seconds',type=float,default=10)
@@ -32,7 +33,7 @@ def main():
         for camera in ('camera','chase'):
             with urlopen(a.url+'/snapshot/'+camera+'.jpg',timeout=4) as r:
                 (out/f'{a.scenario}-{name}-{camera}.jpg').write_bytes(r.read())
-    post('/api/options',{'online':not a.offline,'vision':not a.vision_off,'fusion':False,'autopilot':False})
+    post('/api/options',{'online':not a.offline,'vision':not a.vision_off,'autopilot':False})
     post('/api/reset',{'scenario':a.scenario})
     start_wall=time.monotonic()
     while True:
@@ -47,6 +48,8 @@ def main():
     start_t=start['pose']['time']
     seen=set()
     next_print=start_t
+    if a.auto:
+        post('/api/options',{'autopilot':True})
     try:
         while True:
             s=get('/api/state')
@@ -57,8 +60,8 @@ def main():
                 raise RuntimeError('Simulasi terlalu lambat atau terhenti')
             # Direct throttle speed hold; fixed steering tests direction/lane filters.
             throttle=max(-.3,min(1,(3-s['pose']['speed'])*.8+.12))
-            post('/api/control',{'throttle':throttle,'steer':0,'brake':0})
-            samples.append({k:s[k] for k in ('pose','gps','imu','buzzer','db_warning','storage','vision')})
+            post('/api/heartbeat',{}) if a.auto else post('/api/control',{'throttle':throttle,'steer':0,'brake':0})
+            samples.append({k:s[k] for k in ('pose','gps','imu','imu_history','buzzer','db_warning','storage','vision')})
             for source in s['buzzer']['sources']:
                 if source not in seen:
                     seen.add(source)
