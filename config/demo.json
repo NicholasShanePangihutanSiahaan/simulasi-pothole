@@ -1,4 +1,6 @@
 {
+  "track": {"straight": 160.0, "radius": 30.0, "width": 12.0, "lane": -2.0},
+  "surfaces": {"paving_start": 50.0, "paving_length": 60.0, "bump_x": 95.0, "bump_length": 3.0, "bump_height": 0.08, "crack_x": 40.0},
   "origin": {"latitude": -7.7653, "longitude": 110.3725, "altitude": 120.0},
   "imu": {"sample_rate": 100, "window": 20, "z_threshold": 4.5, "diff_threshold": 3.8, "std_threshold": 1.5, "cooldown": 2.5},
   "vision": {"max_distance": 3.0, "camera_height": 1.08, "camera_pitch": 0.30, "hfov": 1.20, "dark_threshold": 63, "min_area": 24},
