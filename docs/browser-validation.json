@@ -3,8 +3,17 @@
   "responsive": true,
   "keyboard": true,
   "steering": true,
+  "steering_settings": true,
+  "steering_sensitivity": true,
+  "steering_response": true,
   "gamepad_api": true,
   "autopilot": true,
   "audio_context": true,
-  "database_reset": true
+  "database_reset": true,
+  "steering_measurements": {
+    "low_sensitivity": 0.2,
+    "high_sensitivity": 1,
+    "slow_response_250ms": 0.133,
+    "fast_response_250ms": 0.7
+  }
 }
