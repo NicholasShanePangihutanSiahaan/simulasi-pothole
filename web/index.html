@@ -3,7 +3,7 @@
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jaga Jalan · Capstone B-08</title><link rel="stylesheet" href="/style.css"></head>
 <body>
 <header>
-  <a class="brand" href="/" aria-label="Jaga Jalan"><span class="brand-icon">↗</span><span>jaga<span class="brand-light">jalan</span><small>CAPSTONE B-08 / UGM</small></span></a>
+  <a class="brand" href="/" aria-label="Jaga Jalan"><span class="brand-icon">↗</span><span>CAPSTONE B-08</span></a>
   <div class="header-center"><span class="live-dot" id="liveDot"></span> <span id="connection">MENGHUBUNGKAN GAZEBO</span><span class="divider">/</span> LAB SIMULASI SEPEDA</div>
   <div class="header-actions"><button id="sound" class="subtle">♬ Aktifkan suara</button><button id="fullscreen" class="icon-btn" title="Layar penuh">⛶</button><span id="clock">00:00:00</span></div>
 </header>
@@ -13,7 +13,7 @@
     <section class="hero panel">
       <img id="mainCamera" src="/stream/chase" alt="Kamera mengikuti sepeda di lintasan Gazebo">
       <div class="hero-shade"></div>
-      <div class="hero-top"><div><span class="live-tag">● LIVE</span><span class="location-tag">Lintasan kampus · 150 m</span></div><button id="cameraSwitch" class="glass">↻ Ganti kamera</button></div>
+      <div class="hero-top"><div><span class="live-tag">● LIVE</span><span class="location-tag" id="trackLabel">Arena oval · 508 m / putaran</span></div><button id="cameraSwitch" class="glass">↻ Ganti kamera</button></div>
       <div id="cameraWaiting" class="camera-waiting">Menunggu gambar dari Gazebo…<small>Inisialisasi dunia dan kamera dapat memerlukan 20–40 detik.</small></div>
       <div id="roadAlert" class="road-alert" hidden><span>△</span><div><strong id="roadAlertTitle">Jalan rusak di depan</strong><small id="roadAlertSub"></small></div></div>
       <div class="hero-bottom"><div class="speed"><span id="speed">0.0</span><div>km/jam<small id="motion">BERHENTI</small></div></div><div class="ride-coordinates"><span id="gpsText">GPS · menunggu posisi</span><small id="heading">ARAH 090° · TIMUR</small></div></div>
@@ -33,7 +33,8 @@
       <label><span>Peringatan peta</span><input id="opt-database" type="checkbox" checked><i></i></label><label><span>Jaringan online</span><input id="opt-online" type="checkbox" checked><i></i></label>
     </div><div class="queue"><span><b id="reports">0</b> laporan IMU</span><span><b id="pending">0</b> antrean lokal</span></div>
       <div class="scenario-row"><label for="scenario">Mulai dari</label><select id="scenario"><option value="start">Awal lintasan</option><option value="new">A · Lubang baru</option><option value="known">B · Lokasi dari server</option><option value="opposite">B · Lubang di belakang</option><option value="side">B · Lajur sebelah</option><option value="return">B · Mendekat dari arah balik</option><option value="last">D · Uji saat offline</option></select><button id="reset" title="Pindahkan sepeda ke skenario">↻</button></div>
-      <details><summary>Kontrol & validasi lanjutan</summary><label class="plain-check"><input id="opt-fusion" type="checkbox"> Simpan hanya jika IMU + vision (proposal)</label><label class="plain-check"><input id="invertSteer" type="checkbox"> Balik arah stik</label><p class="help">Stik PS: analog kiri = belok; R2 = kayuh; L2 / ✕ = rem; △ = kembali awal. Tekan tombol stik agar browser mengenalinya. Shift + S = mundur.</p><div class="touch-controls"><button data-drive="left">◀</button><button data-drive="forward">▲</button><button data-drive="brake">■</button><button data-drive="right">▶</button></div></details>
+      <div class="database-tools"><button id="resetDatabase">↺ Reset database</button><small>Hapus temuan, bukan lubang fisik. Cadangan otomatis dibuat.</small></div>
+      <details><summary>Kontrol & validasi lanjutan</summary><p class="help">Hanya pothole dari IMU masuk database. Vision hanya menyalakan buzzer. Paving, retakan, dan polisi tidur adalah permukaan pembanding.</p><label class="plain-check"><input id="invertSteer" type="checkbox"> Balik arah stik</label><p class="help">Stik PS: analog kiri = belok; R2 = kayuh; L2 / ✕ = rem; △ = kembali awal. Tekan tombol stik agar browser mengenalinya. Shift + S = mundur.</p><div class="touch-controls"><button data-drive="left">◀</button><button data-drive="forward">▲</button><button data-drive="brake">■</button><button data-drive="right">▶</button></div></details>
     </section>
     <section class="panel event-panel"><div class="panel-head"><h2>Jejak sistem</h2><span class="metric-label">REAL-TIME</span></div><div id="events"><p class="empty">Peristiwa sensor dan sinkronisasi muncul di sini.</p></div></section>
   </aside>
