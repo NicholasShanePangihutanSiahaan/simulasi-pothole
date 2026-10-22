@@ -34,6 +34,8 @@ Untuk pengunjung berikutnya, klik **Reset database** di dashboard lalu konfirmas
 
 Klik area gambar/judul sebelum memakai keyboard. Kendali otomatis berhenti saat halaman kehilangan fokus atau tidak lagi mengirim input. Sambungkan stik melalui USB/Bluetooth OS, lalu tekan salah satu tombol. Pemetaan menggunakan Gamepad API standar; perangkat fisik belum diuji dalam pengerjaan ini.
 
+Jika belokan terasa terlalu agresif, buka **Kontrol & validasi lanjutan**. Atur **Sensitivitas belok** untuk membatasi sudut maksimum dan **Kecepatan respons** untuk mengatur laju perubahan kemudi. Nilai awal 55% / Sedang ditujukan untuk pagelaran. Keyboard, kontrol sentuh, dan analog stik memakai pengaturan yang sama; stik mempunyai kurva progresif agar gerakan kecil lebih presisi. Setelan tersimpan di browser dan dapat dikembalikan dengan tombol **Setelan kemudi standar**.
+
 ## Alur yang didemonstrasikan
 
 - **IMU → GPS → simpan lokal → server.** Akselerasi berasal dari sensor Gazebo saat roda bersentuhan dengan mesh jalan. GPS pada waktu benturan diinterpolasi dari dua sampel NavSat.
