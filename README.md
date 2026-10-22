@@ -2,6 +2,8 @@
 
 Simulasi sepeda 3D di **Gazebo Harmonic** dengan kamera, IMU, GPS, kendali keyboard/stik PS, server HTTP, penyimpanan SQLite, dan dashboard lokal. Dibuat berdasarkan *B-08_Naskah Proposal C251 Final.pdf* serta alur yang diminta pengguna.
 
+Lintasan kini berupa **arena oval loop 508,5 m** dengan aspal mulus, paving blok 60 m (11,8%), retakan, polisi tidur fisik setinggi 8 cm, dan empat pothole. Demo otomatis mengikuti loop; target deteksi hanya pothole.
+
 ## Jalankan
 
 Dari folder proyek:
@@ -20,6 +22,8 @@ bash start.sh --data-dir data/pagelaran-01  # Sesi database baru; data lama teta
 
 Hentikan dengan **Ctrl+C pada terminal launcher**. Database tetap tersimpan. Jangan menjalankan dua launcher pada port yang sama.
 
+Untuk pengunjung berikutnya, klik **Reset database** di dashboard lalu konfirmasi. Server, cache, dan antrean IMU dikosongkan; lubang fisik tetap ada untuk ditemukan ulang. Cadangan dibuat di `data/backups/` (atau folder sesi aktif). Tombol pindah skenario hanya memindahkan sepeda, bukan menghapus data. Setelah reset, seed B tidak muncul kembali saat restart.
+
 ## Kendali
 
 | Perangkat | Gerakan |
@@ -33,7 +37,7 @@ Klik area gambar/judul sebelum memakai keyboard. Kendali otomatis berhenti saat 
 ## Alur yang didemonstrasikan
 
 - **IMU → GPS → simpan lokal → server.** Akselerasi berasal dari sensor Gazebo saat roda bersentuhan dengan mesh jalan. GPS pada waktu benturan diinterpolasi dari dua sampel NavSat.
-- **Vision → buzzer + LED.** Detektor OpenCV memproses piksel kamera depan dan memberi kotak deteksi. Kamera tidak membaca daftar lokasi lubang dari dunia.
+- **Vision → buzzer + LED saja, tanpa database.** Detektor OpenCV memproses piksel kamera depan dan memberi kotak deteksi. Kamera tidak membaca daftar lokasi lubang dari dunia.
 - **Cache server + posisi + arah/jalur → buzzer + LED.** Lubang di belakang, lajur berbeda, terlalu jauh, atau saat sepeda diam tidak memicu peringatan peta.
 - **Offline → antrean tersimpan → kirim ulang saat online.** Cache peta tetap tersedia. Laporan memiliki ID unik agar pengiriman ulang tidak menggandakan observasi; koordinat dekat digabung oleh server.
 
@@ -45,7 +49,7 @@ Gerak vertikal, pitch, gravitasi, roda, dan kontak jalan dihitung Gazebo; propul
 
 **Bobot FOMO dari proposal belum disertakan.** Vision menggunakan baseline OpenCV untuk dunia sintetis. Hasil ini tidak membuktikan akurasi FOMO, akurasi sensor perangkat fisik, atau kinerja di jalan nyata. `pothole/vision.py` adalah titik penggantian detektor.
 
-Secara default, IMU boleh menyimpan tanpa vision sesuai permintaan pengguna. Aktifkan **Kontrol & validasi lanjutan → Simpan hanya jika IMU + vision** untuk mendemonstrasikan validasi ganda proposal Bab 7. IMU sendiri mendeteksi anomali getaran; polisi tidur atau benturan lain dapat menyerupai lubang.
+IMU menyimpan secara independen dari vision. Pola percepatan dan perubahan pitch dari orientasi IMU membedakan penurunan pothole, kenaikan polisi tidur, dan getaran dangkal paving; vision memeriksa ketebalan dan bentuk kontur untuk menolak retakan tipis. Ini baseline simulator, bukan jaminan klasifikasi semua permukaan atau kecepatan di dunia nyata.
 
 ## Persyaratan
 
@@ -78,4 +82,13 @@ python3 -s scripts/check_live.py --scenario known --vision-off --seconds 7
 python3 -s scripts/check_live.py --scenario last --offline --seconds 8
 ```
 
-`config/demo.json` berisi parameter sensor/peringatan dan geometri lintasan. `data/` berisi database serta log; `generated/` berisi aset yang dapat dibuat ulang. Laporan pengujian terdapat di [docs/Hasil_Pengujian.md](docs/Hasil_Pengujian.md).
+`config/demo.json` berisi parameter sensor/peringatan dan geometri lintasan. `data/` berisi database serta log; `generated/` berisi aset yang dapat dibuat ulang. Laporan versi oval tersedia di [docs/Hasil_Pengujian_Oval.md](docs/Hasil_Pengujian_Oval.md); laporan versi lurus sebelumnya tetap diarsipkan.
+
+Uji menyeluruh termasuk reset database harus memakai sesi khusus, bukan data utama:
+
+```bash
+bash start.sh --headless --no-seed --data-dir /tmp/pothole-test --port 8785 --server-port 8786
+# Terminal lain; perintah ini sengaja menghapus database sesi uji di atas:
+/usr/bin/python3 -s scripts/validate_oval.py --url http://localhost:8785 \
+  --out /tmp/pothole-test/evidence --allow-reset-test-database --lap
+```
