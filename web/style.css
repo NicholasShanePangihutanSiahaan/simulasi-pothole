@@ -10,3 +10,4 @@ aside{display:flex;flex-direction:column;gap:16px;padding-top:2px}.alert-panel{d
 .vision-view img{object-fit:contain}
 /* Oval arena and explicit, separately confirmed database reset. */
 .map-panel canvas{min-height:155px}.database-tools{padding:0 17px 12px;display:grid;gap:6px}.database-tools button{border-color:#9a7054;color:#efbd92}.database-tools small{font-size:9px;line-height:1.5;color:var(--muted)}.database-tools button:disabled{opacity:.5;cursor:wait}
+.steer-settings{display:grid;gap:6px;margin:10px 0 12px;padding:10px;background:#142122;border-radius:7px}.steer-settings label{display:flex;justify-content:space-between;align-items:center;color:#c3d0c9}.steer-settings output{color:var(--teal);font-family:monospace}.steer-settings input[type=range]{width:100%;height:18px;accent-color:var(--teal);cursor:pointer}.steer-settings button{font-size:9px;padding:6px;margin-top:2px}
