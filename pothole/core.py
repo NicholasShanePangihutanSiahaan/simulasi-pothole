@@ -48,8 +48,11 @@ class ImuDetector:
         self.start = None
         self.baseline = []
         self.bias = 0
+        self.candidate = None
+        self.quiet_since = None
+        self.pitch_baseline = 0.
 
-    def update(self, t, z, speed):
+    def update(self, t, z, speed, pitch=None):
         if self.last_t is not None and t <= self.last_t:
             self.reset()
         if self.start is None:
@@ -65,15 +68,67 @@ class ImuDetector:
         diff = abs(self.filtered-previous)
         self.window.append(self.filtered)
         std = statistics.pstdev(self.window) if len(self.window)>2 else 0
-        peak = abs(self.filtered)
-        triggered = (t-self.start > 2 and abs(speed) > .7 and len(self.window)==self.window.maxlen
-                     and t-self.last_event > self.cfg['cooldown']
-                     and (peak > self.cfg['z_threshold'] or diff > self.cfg['diff_threshold']
-                          or std > self.cfg['std_threshold']))
+        triggered = False
+        event_time = t
+        classification = 'normal'
+        active = t-self.start>2 and abs(speed)>.7 and t-self.last_event>self.cfg['cooldown']
+        if not active:
+            self.candidate=None
+            if pitch is not None:
+                self.pitch_baseline=pitch
+        elif self.candidate is None and abs(self.filtered)>1.2:
+            self.candidate={'start':t,'first':'unknown',
+                            'velocity':0.,'displacement':0.,'depth':0.,'peak':0.,'negative':0.,
+                            'pitch_base':self.pitch_baseline,'pitch_first':'unknown'}
+            self.quiet_since=None
+        elif self.candidate is None and pitch is not None:
+            self.pitch_baseline+=.03*(pitch-self.pitch_baseline)
+        if self.candidate:
+            c=self.candidate
+            c['velocity']+=self.filtered*dt
+            c['displacement']+=c['velocity']*dt
+            c['depth']=min(c['depth'],c['displacement'])
+            c['peak']=max(c['peak'],abs(self.filtered))
+            c['negative']+=max(0,-self.filtered)*dt
+            # Decide the initial direction from a short integrated excursion,
+            # not a single mesh-contact impulse (which can have either sign).
+            if c['first']=='unknown':
+                if c['displacement']<-.012:
+                    c['first']='drop'
+                elif c['displacement']>.012:
+                    c['first']='rise'
+            if pitch is not None and c['pitch_first']=='unknown':
+                delta_pitch=pitch-c['pitch_base']
+                # IMU frame: positive pitch means front wheel goes DOWN.
+                # Pitch resolves signed acceleration bias from sampled contact
+                # impulses. It is a measured IMU orientation, not world metadata.
+                if delta_pitch>.008:
+                    c['pitch_first']='drop'
+                elif delta_pitch<-.008:
+                    c['pitch_first']='rise'
+            first=c['pitch_first'] if pitch is not None else c['first']
+            classification='bump/rejected' if first=='rise' else 'candidate'
+            # A pothole begins with unloading/drop, then an upward edge impact.
+            # A speed bump begins with upward acceleration; paving's shallow
+            # repeated joints do not accumulate a centimetre-scale descent.
+            triggered=(first=='drop' and c['depth']<-.012 and c['negative']>.12
+                       and self.filtered>2.0 and c['peak']>self.cfg['z_threshold']
+                       and t-c['start']<1.4)
+            if triggered:
+                classification='pothole'
+                event_time=c['start']
+            if abs(self.filtered)<.65:
+                if self.quiet_since is None:
+                    self.quiet_since=t
+            else:
+                self.quiet_since=None
+            if triggered or (self.quiet_since is not None and t-self.quiet_since>.35) or t-c['start']>2.0:
+                self.candidate=None
         if triggered:
             self.last_event = t
         return {'z': self.filtered, 'raw_z': z, 'diff': diff, 'std': std,
                 'peak':max(abs(v) for v in self.window),
+                'event_time':event_time, 'classification':classification,
                 'triggered': triggered, 'calibrating': t-self.start <= 2}
 
 
