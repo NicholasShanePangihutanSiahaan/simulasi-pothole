@@ -91,6 +91,9 @@ def handler(runtime):
                     runtime.set_options(data)
                 elif self.path=='/api/reset':
                     runtime.reset(data.get('scenario','start'))
+                elif self.path=='/api/database/reset':
+                    self.reply(runtime.reset_database(data.get('confirm')))
+                    return
                 elif self.path=='/api/heartbeat':
                     with runtime.lock:
                         runtime.last_client=time.monotonic()
@@ -100,6 +103,8 @@ def handler(runtime):
                 self.reply({'ok':True})
             except (ValueError,TypeError,KeyError) as exc:
                 self.reply({'error':str(exc)},status=400)
+            except OSError as exc:
+                self.reply({'error':'Reset gagal; pastikan server database berjalan. '+str(exc)},status=503)
     return Handler
 
 
