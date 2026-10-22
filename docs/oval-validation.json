@@ -1,0 +1,92 @@
+[
+  {
+    "name": "vision_only_never_stored",
+    "passed": true,
+    "reports": 0
+  },
+  {
+    "name": "pothole_imu_and_vision",
+    "passed": true,
+    "reports": 1
+  },
+  {
+    "name": "reject_crack",
+    "passed": true,
+    "reports": 0,
+    "sources": []
+  },
+  {
+    "name": "reject_bump",
+    "passed": true,
+    "reports": 0,
+    "sources": []
+  },
+  {
+    "name": "reject_paving",
+    "passed": true,
+    "reports": 0,
+    "sources": []
+  },
+  {
+    "name": "imu_without_vision",
+    "passed": true,
+    "reports": 1
+  },
+  {
+    "name": "small_pothole_C",
+    "passed": true,
+    "reports": 1,
+    "sources": [
+      "VISION"
+    ]
+  },
+  {
+    "name": "database_approach",
+    "passed": true,
+    "sources": [
+      "DATABASE"
+    ]
+  },
+  {
+    "name": "offline_queue",
+    "passed": true,
+    "reports": 1
+  },
+  {
+    "name": "reset_including_offline_queue",
+    "passed": true,
+    "storage": {
+      "total_reports": 0,
+      "pending": 0,
+      "cached": 0
+    },
+    "backups": {
+      "device": "/tmp/pothole-oval-validation-v2/backups/device-20261022-140756-a08cee47.sqlite3",
+      "server": "/tmp/pothole-oval-validation-v2/backups/server-20261022-140756-40d47a53.sqlite3"
+    }
+  },
+  {
+    "name": "sync_does_not_restore_deleted_data",
+    "passed": true,
+    "storage": {
+      "total_reports": 0,
+      "pending": 0,
+      "cached": 0
+    }
+  },
+  {
+    "name": "complete_stadium_lap",
+    "passed": true,
+    "reports": 5,
+    "end": {
+      "x": 71.6407298525686,
+      "y": -1.9399995270685517,
+      "z": 0.7199999680702305,
+      "yaw": -0.03200669098815911,
+      "roll": 4.0612894778434413e-07,
+      "pitch": 8.022620597631183e-09,
+      "speed": 0.7753865330727102,
+      "time": 440.846
+    }
+  }
+]
