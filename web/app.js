@@ -2,7 +2,17 @@
 const $ = id => document.getElementById(id);
 let state=null, sound=null, soundOn=false, lastBeep=0, mainView='chase', focused=true;
 const keys=new Set(), touch=new Set();
-let toastTimer, previousGameButtons=[], gamepadName='';
+let toastTimer, previousGameButtons=[], gamepadName='', smoothSteer=0;
+const steeringDefaults={sensitivity:55,response:45};
+function savedNumber(key,fallback){const value=Number(localStorage.getItem(key));return Number.isFinite(value)?value:fallback;}
+function steeringSettings(){return {sensitivity:Number($('steerSensitivity').value)/100,response:Number($('steerResponse').value)/100};}
+function responseLabel(value){return value<.34?'Halus':value<.67?'Sedang':'Cepat';}
+function showSteeringSettings(){const s=steeringSettings();$('steerSensitivityValue').textContent=Math.round(s.sensitivity*100)+'% · '+(27.5*s.sensitivity).toFixed(0)+'°';$('steerResponseValue').textContent=responseLabel(s.response);}
+$('steerSensitivity').value=Math.max(20,Math.min(100,savedNumber('pothole-steer-sensitivity',steeringDefaults.sensitivity)));
+$('steerResponse').value=Math.max(10,Math.min(100,savedNumber('pothole-steer-response',steeringDefaults.response)));
+for(const id of ['steerSensitivity','steerResponse'])$(id).oninput=()=>{localStorage.setItem('pothole-'+(id==='steerSensitivity'?'steer-sensitivity':'steer-response'),$(id).value);showSteeringSettings();};
+$('resetSteering').onclick=()=>{$('steerSensitivity').value=steeringDefaults.sensitivity;$('steerResponse').value=steeringDefaults.response;localStorage.setItem('pothole-steer-sensitivity',steeringDefaults.sensitivity);localStorage.setItem('pothole-steer-response',steeringDefaults.response);showSteeringSettings();toast('Setelan kemudi kembali ke standar.');};
+showSteeringSettings();
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').hidden=true,3500);}
 async function post(path,data){const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(!r.ok){const e=await r.json();throw new Error(e.error||'Permintaan gagal');}return r.json();}
 function safely(p){p.catch(e=>toast(e.message));}
@@ -12,7 +22,7 @@ $('sound').onclick=enableSound;
 $('fullscreen').onclick=()=>safely(document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen());
 $('cameraSwitch').onclick=()=>{mainView=mainView==='chase'?'camera':'chase';$('mainCamera').src='/stream/'+mainView;};
 $('auto').onclick=()=>safely(post('/api/options',{autopilot:!state?.options.autopilot}));
-function reset(scenario){safely(post('/api/reset',{scenario}));keys.clear();touch.clear();toast('Posisi dipindahkan. Tunggu kalibrasi IMU 2 detik.');}
+function reset(scenario){safely(post('/api/reset',{scenario}));keys.clear();touch.clear();smoothSteer=0;toast('Posisi dipindahkan. Tunggu kalibrasi IMU 2 detik.');}
 $('reset').onclick=()=>reset($('scenario').value);
 for(const [value,label] of [['small','C · Pothole kecil / lajur kiri'],['crack','Retakan · bukan pothole'],['bump','Polisi tidur · bukan pothole'],['paving','Paving blok · 60 m'],['curve','Tikungan arena oval']])$('scenario').add(new Option(label,value));
 $('resetDatabase').onclick=async()=>{
@@ -26,7 +36,7 @@ for(const option of ['vision','imu','database','online'])$('opt-'+option).onchan
 const driveKeys=new Set(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ']);
 window.addEventListener('keydown',e=>{if(['INPUT','SELECT','TEXTAREA','BUTTON','SUMMARY'].includes(e.target.tagName))return;const k=e.key.toLowerCase();if(driveKeys.has(k)){e.preventDefault();keys.add(k);if(e.shiftKey)keys.add('shift');}if(!e.repeat&&k==='r')reset('start');if(!e.repeat&&k==='p')$('auto').click();});
 window.addEventListener('keyup',e=>{keys.delete(e.key.toLowerCase());if(!e.shiftKey)keys.delete('shift');});
-function stopInput(){keys.clear();touch.clear();focused=false;safely(post('/api/control',{throttle:0,steer:0,brake:1}));}
+function stopInput(){keys.clear();touch.clear();smoothSteer=0;focused=false;safely(post('/api/control',{throttle:0,steer:0,brake:1}));}
 window.addEventListener('blur',stopInput);window.addEventListener('focus',()=>focused=true);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopInput();else focused=true;});
 window.addEventListener('gamepaddisconnected',()=>{previousGameButtons=[];stopInput();focused=document.hasFocus();toast('Stik terputus. Sepeda direm.');});
@@ -34,19 +44,21 @@ for(const b of document.querySelectorAll('[data-drive]')){b.onpointerdown=e=>{e.
 let sending=false;
 setInterval(async()=>{
   if(sending||!state)return;
-  let throttle=0,steer=0,brake=0,hasInput=false;
+  let throttle=0,targetSteer=0,brake=0,hasInput=false;
   if(focused){
+    const settings=steeringSettings();
     throttle=keys.has('w')||keys.has('arrowup')||touch.has('forward')?1:0;
     if(keys.has('s')||keys.has('arrowdown')){if(keys.has('shift'))throttle=-.55;else brake=.8;}
-    steer=(keys.has('a')||keys.has('arrowleft')||touch.has('left')?1:0)-(keys.has('d')||keys.has('arrowright')||touch.has('right')?1:0);
+    targetSteer=((keys.has('a')||keys.has('arrowleft')||touch.has('left')?1:0)-(keys.has('d')||keys.has('arrowright')||touch.has('right')?1:0))*settings.sensitivity;
     if(keys.has(' ')||touch.has('brake'))brake=1;
-    hasInput=throttle!==0||steer!==0||brake!==0;
+    hasInput=throttle!==0||targetSteer!==0||brake!==0;
     const pad=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.connected);
     if(pad){
       gamepadName=pad.id;const axis=pad.axes[0]||0;
-      const ps=-(Math.abs(axis)<.12?0:Math.sign(axis)*(Math.abs(axis)-.12)/.88)*($('invertSteer').checked?-1:1);
+      const normalized=Math.abs(axis)<.12?0:Math.sign(axis)*(Math.abs(axis)-.12)/.88;
+      const ps=-Math.sign(normalized)*Math.pow(Math.abs(normalized),1.6)*settings.sensitivity*($('invertSteer').checked?-1:1);
       const pt=pad.buttons[7]?.value||0,pb=Math.max(pad.buttons[6]?.value||0,pad.buttons[0]?.value||0);
-      if(Math.abs(ps)>.04||pt>.04||pb>.04){steer=ps;throttle=pt;brake=pb;hasInput=true;}
+      if(Math.abs(ps)>.02||pt>.04||pb>.04){targetSteer=ps;throttle=pt;brake=pb;hasInput=true;}
       if(pad.buttons[3]?.pressed&&!previousGameButtons[3])reset('start');
       if(pad.buttons[9]?.pressed&&!previousGameButtons[9])$('auto').click();
       previousGameButtons=pad.buttons.map(b=>b.pressed);
@@ -55,8 +67,12 @@ setInterval(async()=>{
   }
   // Autopilot owns commands only while no person is using the controls.
   if(state.options.autopilot&&!hasInput&&focused){sending=true;try{await post('/api/heartbeat',{});}catch(e){}finally{sending=false;}return;}
-  if(!focused){throttle=steer=0;brake=1;}
-  sending=true;try{await post('/api/control',{throttle,steer,brake});}catch(e){/* state polling reports connectivity */}finally{sending=false;}
+  if(!focused){throttle=targetSteer=0;brake=1;}
+  const response=steeringSettings().response;
+  const maxStep=.035+.315*response;
+  smoothSteer+=Math.max(-maxStep,Math.min(maxStep,targetSteer-smoothSteer));
+  if(Math.abs(smoothSteer)<.004&&targetSteer===0)smoothSteer=0;
+  sending=true;try{await post('/api/control',{throttle,steer:smoothSteer,brake});}catch(e){/* state polling reports connectivity */}finally{sending=false;}
 },100);
 function fit(canvas){const d=window.devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==w*d||canvas.height!==h*d){canvas.width=w*d;canvas.height=h*d;}const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);return {c,w,h};}
 function drawChart(s){const {c,w,h}=fit($('chart'));const data=s.imu_history;const max=Math.max(7,...data.map(p=>Math.abs(p[1])))*1.1;const y=v=>h/2-v/max*(h/2-9);c.strokeStyle='#33453e';c.lineWidth=.7;for(const v of [-max/2,0,max/2]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([3,4]);c.strokeStyle='#967844';for(const v of [-s.config.imu.z_threshold,s.config.imu.z_threshold]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([]);if(data.length>1){const t=data[data.length-1][0],span=4.5;c.beginPath();let started=false;for(const p of data){const x=w-(t-p[0])/span*w;if(x<0)continue;if(!started){c.moveTo(x,y(p[1]));started=true;}else c.lineTo(x,y(p[1]));}c.strokeStyle='#83d2b3';c.lineWidth=1.6;c.stroke();}c.fillStyle='#7f9b8c';c.font='8px monospace';c.fillText('+'+max.toFixed(0),5,10);c.fillText('−'+max.toFixed(0),5,h-3);}
