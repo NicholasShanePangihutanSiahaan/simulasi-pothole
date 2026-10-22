@@ -6,7 +6,7 @@ const path=require('path');
   const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   const page=await browser.newPage({viewport:{width:1440,height:1080},deviceScaleFactor:1});
   const errors=[];page.on('pageerror',e=>errors.push(String(e)));
-  const checks={javascript:false,responsive:false,keyboard:false,steering:false,gamepad_api:false,autopilot:false,audio_context:false};
+  const checks={javascript:false,responsive:false,keyboard:false,steering:false,gamepad_api:false,autopilot:false,audio_context:false,database_reset:false};
   const url=process.env.DEMO_URL||'http://127.0.0.1:8765';
   const out=path.resolve('docs/images');fs.mkdirSync(out,{recursive:true});
   await page.goto(url,{waitUntil:'domcontentloaded'});
@@ -22,6 +22,18 @@ const path=require('path');
   await page.locator('h1').click();
   await page.screenshot({path:path.join(out,'dashboard.png'),fullPage:true});
   if(process.env.BROWSER_DRIVE==='1'){
+    // Run only against an isolated test session: this confirms database reset.
+    if(process.env.ALLOW_DATABASE_RESET!=='1')throw Error('Set ALLOW_DATABASE_RESET=1 only for an isolated test database');
+    const beforeReset=await page.evaluate(async()=>(await (await fetch('/api/state')).json()).storage);
+    page.once('dialog',d=>d.dismiss());
+    await page.locator('#resetDatabase').click();
+    await page.waitForTimeout(300);
+    const cancelled=await page.evaluate(async()=>(await (await fetch('/api/state')).json()).storage);
+    if(JSON.stringify(beforeReset)!==JSON.stringify(cancelled))throw Error('Cancel mengubah database');
+    page.once('dialog',d=>d.accept());
+    await page.locator('#resetDatabase').click();
+    await page.waitForFunction(async()=>{const s=await (await fetch('/api/state')).json();return Object.values(s.storage).every(v=>v===0)&&!s.imu.calibrating;},null,{timeout:20000});
+    checks.database_reset=true;
     // Browser-driven keyboard and standard Gamepad API mapping.
     await page.evaluate(()=>fetch('/api/reset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scenario:'start'})}));
     await page.waitForTimeout(3000);
