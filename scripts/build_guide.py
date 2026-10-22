@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Build the Indonesian exhibition guide with local fonts and ReportLab."""
 from pathlib import Path
+import json
 import re
+import sys
 from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
@@ -12,10 +14,12 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, PageBreak,
     Table, TableStyle, Image, KeepTogether, Preformatted, HRFlowable)
-from reportlab.graphics.shapes import Drawing, Rect, String, Line, Polygon
+from reportlab.graphics.shapes import Drawing, Rect, String, Line, Polygon, Path as DrawPath, Circle
 
 ROOT=Path(__file__).resolve().parents[1]
 DOC=ROOT/'docs'
+sys.path.insert(0,str(ROOT))
+from pothole.track import point as track_point, length as track_length
 
 
 def build():
@@ -56,7 +60,32 @@ def build():
     story += [Spacer(1,14),para('Jalankan: bash start.sh   ·   Buka: http://localhost:8765','H2ID'),
               para('Klik Aktifkan suara, tunggu kalibrasi, lalu gunakan W/A/S/D atau stik PS.\nPanduan ini mencakup skenario pagelaran, alur data, parameter, dan pemecahan masalah.','SmallID'),
               HRFlowable(width='100%',thickness=1,color=colors.HexColor('#c8d8cf')),Spacer(1,10),
-              para('Edisi 1 Oktober 2026. Berdasarkan proposal C-251 B-08 revisi 01.\nSimulasi memakai Gazebo Harmonic dan detektor OpenCV sebagai baseline; bobot FOMO belum disertakan.','SmallID'),PageBreak()]
+              para('Edisi arena oval, 22 Oktober 2026. Berdasarkan proposal C-251 B-08 revisi 01 dan pembaruan kebutuhan pengguna.\nGazebo Harmonic, paving 60 m, retakan, polisi tidur, pothole, dan reset database. Detektor OpenCV adalah baseline; bobot FOMO belum disertakan.','SmallID'),PageBreak()]
+    story.append(para('Arena oval dan permukaan pembanding','H1ID'))
+    cfg=json.loads((ROOT/'config/demo.json').read_text())
+    track=cfg['track'];total=track_length(track)
+    arena=Drawing(505,205)
+    scale=1.9
+    mx=lambda x:252.5+(x-track['straight']/2)*scale
+    my=lambda y:45+y*scale
+    path=DrawPath(strokeColor=colors.HexColor('#5b6463'),strokeWidth=track['width']*scale,fillColor=None)
+    for i in range(401):
+        x,y,_=track_point(total*i/400,track)
+        if i==0:path.moveTo(mx(x),my(y))
+        else:path.lineTo(mx(x),my(y))
+    arena.add(path)
+    surf=cfg['surfaces'];right=track['straight']-surf['paving_start'];left=right-surf['paving_length']
+    arena.add(Rect(mx(left),my(2*track['radius'])-track['width']*scale/2,
+                   (right-left)*scale,track['width']*scale,fillColor=colors.HexColor('#b5a58c'),strokeColor=None))
+    arena.add(String(252.5,185,'PAVING BLOK 60 m / 11,8%',textAnchor='middle',fontName='Bold',fontSize=9,fillColor=dark))
+    arena.add(String(252.5,112,'LAPANGAN TENGAH',textAnchor='middle',fontName='Body',fontSize=9,fillColor=muted))
+    arena.add(String(252.5,95,'508,5 m per putaran / lebar jalan 12 m',textAnchor='middle',fontName='Body',fontSize=8,fillColor=muted))
+    for hole in cfg['potholes']:
+        arena.add(Circle(mx(hole['x']),my(hole['y']),3.5,fillColor=colors.HexColor('#d78032'),strokeColor=None))
+        arena.add(String(mx(hole['x']),my(-13),hole['name'],textAnchor='middle',fontName='Bold',fontSize=8,fillColor=dark))
+    arena.add(Line(mx(surf['bump_x']),my(-5),mx(surf['bump_x']),my(5),strokeWidth=4,strokeColor=colors.HexColor('#edc04b')))
+    arena.add(Line(mx(surf['crack_x']),my(-5),mx(surf['crack_x']+.5),my(5),strokeWidth=1,strokeColor=colors.black))
+    story += [arena,para('Skema objek dunia, bukan isi database: A–D = pothole. Retakan pada x=40 m; garis kuning x=95 m = polisi tidur. Aspal mendominasi lintasan. Peta dashboard hanya menampilkan titik pothole yang sudah tersinkron.','SmallID')]
     story.append(para('Arsitektur demonstrasi','H1ID'))
     d=Drawing(505,230)
     rows=[('IMU + GPS','Simpan lokal','HTTP ke server'),
