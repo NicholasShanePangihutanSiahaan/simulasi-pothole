@@ -115,13 +115,37 @@ def test_vision_rejects_thin_jagged_cracks():
 def test_imu_pitch_rejects_bump_even_with_negative_acceleration_bias(pitch_sign,expected):
     detector=ImuDetector(CFG['imu'])
     hits=[]
+    crossed_amplitude=False
     for i in range(500):
         dt=i*.01-3
         z=(-6 if dt<.12 else 12 if dt<.24 else 0) if dt>=0 else 0
         pitch=pitch_sign*.04 if 0<=dt<.4 else 0
-        if detector.update(i*.01,z,3 if i>220 else 0,pitch)['triggered']:
+        result=detector.update(i*.01,z,3 if i>220 else 0,pitch)
+        if result['assessment']:
+            crossed_amplitude |= result['assessment']['checks']['amplitude']
+            assert result['peak']==result['assessment']['peak']
+        if result['triggered']:
+            assert all(result['assessment']['checks'].values())
+            assert result['last_detection']['peak']==result['peak']
             hits.append(i)
+    assert crossed_amplitude  # Both profiles cross the plotted line.
     assert bool(hits)==expected
+    assert (result['last_detection'] is not None)==expected
+    detector.reset()
+    assert detector.last_detection is None
+
+
+def test_high_amplitude_paving_is_not_a_pothole_without_drop_pattern():
+    detector=ImuDetector(CFG['imu'])
+    crossed=False
+    for i in range(600):
+        t=i*.01
+        z=12*math.sin((t-3)*50) if t>=3 else 0
+        result=detector.update(t,z,3 if t>2.2 else 0,pitch=0)
+        if result['assessment']:
+            crossed |= result['assessment']['checks']['amplitude']
+        assert not result['triggered']
+    assert crossed
 
 
 def test_coordinates_roundtrip():
