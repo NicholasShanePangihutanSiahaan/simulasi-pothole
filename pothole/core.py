@@ -51,6 +51,7 @@ class ImuDetector:
         self.candidate = None
         self.quiet_since = None
         self.pitch_baseline = 0.
+        self.last_detection = None
 
     def update(self, t, z, speed, pitch=None):
         if self.last_t is not None and t <= self.last_t:
@@ -71,6 +72,7 @@ class ImuDetector:
         triggered = False
         event_time = t
         classification = 'normal'
+        assessment = None
         active = t-self.start>2 and abs(speed)>.7 and t-self.last_event>self.cfg['cooldown']
         if not active:
             self.candidate=None
@@ -114,9 +116,19 @@ class ImuDetector:
             triggered=(first=='drop' and c['depth']<-.012 and c['negative']>.12
                        and self.filtered>2.0 and c['peak']>self.cfg['z_threshold']
                        and t-c['start']<1.4)
+            # Expose the same features used above: crossing the amplitude line
+            # alone is not a pothole decision. These are short-window signal
+            # integrals, not measurements of the physical pothole's depth.
+            assessment = {'peak':c['peak'], 'first_motion':first,
+                          'descent_integral':c['depth'], 'negative_impulse':c['negative'],
+                          'checks':{'amplitude':c['peak']>self.cfg['z_threshold'],
+                                    'drop':first=='drop', 'descent':c['depth']<-.012,
+                                    'impulse':c['negative']>.12, 'rebound':self.filtered>2.0,
+                                    'duration':t-c['start']<1.4}}
             if triggered:
                 classification='pothole'
                 event_time=c['start']
+                self.last_detection={'time':t, 'peak':c['peak']}
             if abs(self.filtered)<.65:
                 if self.quiet_since is None:
                     self.quiet_since=t
@@ -127,8 +139,9 @@ class ImuDetector:
         if triggered:
             self.last_event = t
         return {'z': self.filtered, 'raw_z': z, 'diff': diff, 'std': std,
-                'peak':max(abs(v) for v in self.window),
+                'peak':assessment['peak'] if assessment else max(abs(v) for v in self.window),
                 'event_time':event_time, 'classification':classification,
+                'assessment':assessment, 'last_detection':self.last_detection,
                 'triggered': triggered, 'calibrating': t-self.start <= 2}
 
 
