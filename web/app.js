@@ -75,7 +75,38 @@ setInterval(async()=>{
   sending=true;try{await post('/api/control',{throttle,steer:smoothSteer,brake});}catch(e){/* state polling reports connectivity */}finally{sending=false;}
 },100);
 function fit(canvas){const d=window.devicePixelRatio||1,w=canvas.clientWidth,h=canvas.clientHeight;if(canvas.width!==w*d||canvas.height!==h*d){canvas.width=w*d;canvas.height=h*d;}const c=canvas.getContext('2d');c.setTransform(d,0,0,d,0,0);c.clearRect(0,0,w,h);return {c,w,h};}
-function drawChart(s){const {c,w,h}=fit($('chart'));const data=s.imu_history;const max=Math.max(7,...data.map(p=>Math.abs(p[1])))*1.1;const y=v=>h/2-v/max*(h/2-9);c.strokeStyle='#33453e';c.lineWidth=.7;for(const v of [-max/2,0,max/2]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([3,4]);c.strokeStyle='#967844';for(const v of [-s.config.imu.z_threshold,s.config.imu.z_threshold]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}c.setLineDash([]);if(data.length>1){const t=data[data.length-1][0],span=4.5;c.beginPath();let started=false;for(const p of data){const x=w-(t-p[0])/span*w;if(x<0)continue;if(!started){c.moveTo(x,y(p[1]));started=true;}else c.lineTo(x,y(p[1]));}c.strokeStyle='#83d2b3';c.lineWidth=1.6;c.stroke();}c.fillStyle='#7f9b8c';c.font='8px monospace';c.fillText('+'+max.toFixed(0),5,10);c.fillText('−'+max.toFixed(0),5,h-3);}
+function drawChart(s){
+  const {c,w,h}=fit($('chart')),span=4.5,t=s.imu_history.at(-1)?.[0]||0;
+  const data=s.imu_history.filter(p=>p[0]>=t-span),threshold=s.config.imu.z_threshold;
+  const max=Math.max(7,threshold*1.2,...data.map(p=>Math.abs(p[1])))*1.1;
+  const y=v=>h/2-v/max*(h/2-12),x=p=>w-(t-p[0])/span*w;
+  c.strokeStyle='#33453e';c.lineWidth=.7;
+  for(const v of [-max/2,0,max/2]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}
+  c.setLineDash([3,4]);c.strokeStyle='#b89553';
+  for(const v of [-threshold,threshold]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}
+  c.setLineDash([]);
+  if(data.length>1){c.beginPath();data.forEach((p,i)=>i?c.lineTo(x(p),y(p[1])):c.moveTo(x(p),y(p[1])));c.strokeStyle='#83d2b3';c.lineWidth=1.6;c.stroke();}
+  for(const p of data)if(p[2]==='pothole'){c.fillStyle='#f5b75a';c.beginPath();c.arc(x(p),y(p[1]),3.5,0,2*Math.PI);c.fill();}
+  c.font='8px monospace';c.fillStyle='#b89553';c.textAlign='right';c.fillText('±'+threshold.toFixed(1)+' m/s²',w-5,10);
+  c.textAlign='left';c.fillStyle='#7f9b8c';c.fillText('+'+max.toFixed(1),5,10);c.fillText('−'+max.toFixed(1),5,h-3);c.textAlign='right';c.fillText('4,5 dtk · skala Y otomatis',w-5,h-3);c.textAlign='left';
+}
+function renderImu(s){
+  const imu=s.imu,a=imu.assessment,threshold=s.config.imu.z_threshold;
+  const recent=imu.last_detection&&s.pose.time-imu.last_detection.time>=0&&s.pose.time-imu.last_detection.time<1.5;
+  $('az').textContent=imu.z.toFixed(2);
+  $('imuFlag').textContent=!s.options.imu?'IMU NONAKTIF':imu.calibrating?'KALIBRASI':recent?'POTHOLE':imu.classification==='bump/rejected'?'TONJOLAN DITOLAK':imu.classification==='candidate'?'UJI POLA':'MEMANTAU';
+  $('imuThreshold').textContent='±'+threshold.toFixed(1)+' · syarat puncak';
+  $('std').textContent='σ '+imu.std.toFixed(2)+' · ΔZ '+imu.diff.toFixed(2)+' (info)';
+  let detail='Belum ada pola pothole. Guncangan besar juga dapat berasal dari paving atau polisi tidur.';
+  if(!s.options.imu)detail='Pencatatan IMU nonaktif; grafik sensor tetap berjalan.';
+  else if(imu.calibrating)detail='Kalibrasi bias IMU; tahan sepeda tetap diam selama 2 detik.';
+  else if(recent)detail='Pola pothole terkonfirmasi · puncak kejadian '+imu.last_detection.peak.toFixed(2)+' m/s². Proses pencatatan lokasi dipicu.';
+  else if(a){
+    const peak='Puncak kejadian '+a.peak.toFixed(2)+' / '+threshold.toFixed(1)+' m/s². ';
+    detail=peak+(a.first_motion==='rise'?'Ditolak: bagian depan naik terlebih dahulu (pola tonjolan).':a.checks.amplitude?'Syarat amplitudo terpenuhi; pola turun dan benturan belum lengkap.':'Syarat amplitudo belum terpenuhi; guncangan masih dipantau.');
+  }
+  $('imuDecision').textContent=detail;
+}
 function drawMap(s){
   const {c,w,h}=fit($('map')),t=s.config.track,r=t.radius,l=t.straight;
   const scale=Math.min((w-30)/(l+2*r+16),(h-35)/(2*r+16));
@@ -104,7 +135,7 @@ function render(s){
   $('trackLabel').textContent='Arena oval · '+s.config.track.length.toFixed(0)+' m / putaran';
   $('fps').textContent=s.vision.fps.toFixed(1)+' FPS';$('latency').textContent=s.vision.latency_ms.toFixed(1)+' ms / frame';
   $('visionFlag').textContent=!s.options.vision?'VISION NONAKTIF':s.vision.detections.length?'DUGAAN LUBANG TERDETEKSI':'TIDAK ADA DETEKSI';$('visionFlag').classList.toggle('warn',s.vision.detections.length>0);
-  $('az').textContent=s.imu.z.toFixed(2);$('imuFlag').textContent=s.imu.calibrating?'KALIBRASI':s.imu.triggered?'POTHOLE':s.imu.classification==='candidate'?'UJI POLA':'MEMANTAU';$('std').textContent='σ '+s.imu.std.toFixed(2)+' · ΔZ '+s.imu.diff.toFixed(2);
+  renderImu(s);
   const warn=s.buzzer.active;
   $('alertPanel').classList.toggle('warning',warn);$('alertSymbol').textContent=warn?'!':'✓';
   $('alertTitle').textContent=warn?'Waspada jalan rusak':healthy?'Tidak ada peringatan':'Menunggu sensor';
