@@ -107,7 +107,7 @@ class Runtime:
         with self.lock:
             self.last_imu=time.monotonic()
             self.imu=self.detector.update(t,z,self.pose['speed'],quaternion_euler(msg.orientation)[1])
-            self.history.append([round(t,3),round(self.imu['z'],3)])
+            self.history.append([round(t,3),round(self.imu['z'],3),self.imu['classification']])
             if self.imu['triggered'] and self.options['imu']:
                 self.pending_fixes.append({'time':self.imu.get('event_time',t),'peak':self.imu['peak'],
                     'std':self.imu['std'],'source':'imu','classification':'pothole',
