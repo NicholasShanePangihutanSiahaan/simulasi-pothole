@@ -21,9 +21,9 @@ def material(color):
     return f"<material><ambient>{color} 1</ambient><diffuse>{color} 1</diffuse><specular>0.05 0.05 0.05 1</specular></material>"
 
 
-def box(name, xyz, size, color, collision=False):
+def box(name, xyz, size, color, collision=False, yaw=0):
     geom = f"<geometry><box><size>{' '.join(map(str, size))}</size></box></geometry>"
-    pose = f"<pose>{' '.join(map(str, xyz))} 0 0 0</pose>"
+    pose = f"<pose>{' '.join(map(str, xyz))} 0 0 {yaw}</pose>"
     return (f'<visual name="{name}">{pose}{geom}{material(color)}</visual>' +
             (f'<collision name="{name}_collision">{pose}{geom}</collision>' if collision else ''))
 
@@ -262,6 +262,9 @@ def generate():
     total=track_length(track)
     assert 0<surf['paving_length']<total/2
     cursor = 0
+    shoulder_width = 1.25
+    shoulder_top = 0.45
+    shoulder_bottom = -0.30
     sections=[(h['x']-2,h['x']+2,'hole_'+h['name'],h,'asphalt') for h in CFG['potholes']]
     sections += [(surf['crack_x']-2,surf['crack_x']+2,'cracks',None,'crack'),
                  (surf['bump_x']-surf['bump_length']/2,surf['bump_x']+surf['bump_length']/2,'speed_bump',None,'bump')]
@@ -276,8 +279,22 @@ def generate():
     road += ribbon('left_turn',2*straight+math.pi*radius,total,0,12,'0.39 0.40 0.42 1',True,0)
     road += box('ground',(straight/2,radius,-.40),(straight+2*radius+80,2*radius+100,.25),'0.28 0.40 0.20',True)
     for side in (-1,1):
-        road += ribbon('edge_'+str(side),0,total,side*5.8,.12,'0.90 0.90 0.81 1')
-        road += ribbon('walk_'+str(side),0,total,side*6.8,1.25,'0.57 0.58 0.54 1',False,.025)
+        road += ribbon(
+            'edge_'+str(side), 0, total, side*5.8, .12, '0.90 0.90 0.81 1'
+        )
+        offset = side * (track['width']/2 + shoulder_width/2)
+        samples = np.linspace(0, total, int(math.ceil(total))+1)
+        for i, (s0,s1) in enumerate(zip(samples[:-1], samples[1:])):
+            x0, y0, _ = track_point(s0, track, offset)
+            x1, y1, _ = track_point(s1, track, offset)
+            road += box(
+                f'raised_shoulder_{side}_{i}',
+                ((x0+x1)/2, (y0+y1)/2, (shoulder_top+shoulder_bottom)/2),
+                (math.hypot(x1-x0, y1-y0) + .08, shoulder_width, shoulder_top-shoulder_bottom),
+                '0.40 0.48 0.32',
+                collision=True,
+                yaw=math.atan2(y1-y0, x1-x0)
+            )
     for i,s in enumerate(np.arange(0,total,6)):
         road += ribbon('dash_'+str(i),s,min(s+2.8,total),0,.10,'0.94 0.83 0.42 1')
     for i in range(12):
