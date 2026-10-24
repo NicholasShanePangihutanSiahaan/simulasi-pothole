@@ -82,7 +82,7 @@ def main():
             files.append(output)
             proc=subprocess.Popen(cmd,env=env,stdout=output,stderr=subprocess.STDOUT,start_new_session=True)
             children.append((name,proc))
-        print(f'\nJAGA JALAN — Capstone B-08\nDashboard: http://localhost:{args.port}\n'
+        print(f'\nPIT HOLE — Capstone B-08\nDashboard: http://localhost:{args.port}\n'
               f'Data: {data}\nLog: {logs}\n'
               'Buka dashboard di Firefox/Chrome, lalu klik Aktifkan suara.\n'
               'W/A/S/D + spasi atau stik PS. Ctrl+C untuk berhenti.\n',flush=True)
