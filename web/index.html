@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="id">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jaga Jalan · Capstone B-08</title><link rel="stylesheet" href="/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pit Hole · Capstone B-08</title><link rel="stylesheet" href="/style.css"></head>
 <body>
 <header>
-  <a class="brand" href="/" aria-label="Jaga Jalan"><span class="brand-icon">↗</span><span>CAPSTONE B-08</span></a>
+  <a class="brand" href="/" aria-label="Pit Hole"><span class="brand-icon">↗</span><span>CAPSTONE B-08</span></a>
   <div class="header-center"><span class="live-dot" id="liveDot"></span> <span id="connection">MENGHUBUNGKAN GAZEBO</span><span class="divider">/</span> LAB SIMULASI SEPEDA</div>
   <div class="header-actions"><button id="sound" class="subtle">♬ Aktifkan suara</button><button id="fullscreen" class="icon-btn" title="Layar penuh">⛶</button><span id="clock">00:00:00</span></div>
 </header>
@@ -21,7 +21,7 @@
     </section>
     <div class="sensor-grid">
       <section class="panel vision-panel"><div class="panel-head"><h2><span class="number">01</span> Vision</h2><span id="fps" class="metric-label">— FPS</span></div><div class="vision-view"><img src="/stream/camera" alt="Citra kamera depan dengan kotak deteksi OpenCV"><span id="visionFlag" class="image-tag">MENUNGGU KAMERA</span></div><div class="panel-foot"><span>OpenCV · baseline simulasi</span><span id="latency">— ms / frame</span></div></section>
-      <section class="panel imu-panel"><div class="panel-head"><h2><span class="number">02</span> Respons IMU</h2><span class="metric-label">100 Hz SIM</span></div><div class="imu-reading"><strong id="az">0.00</strong><span>m/s²<small>percepatan vertikal tanpa gravitasi</small></span><span id="imuFlag" class="pill">KALIBRASI</span></div><canvas id="chart" aria-label="Grafik percepatan IMU"></canvas><div class="panel-foot"><span><i class="legend teal"></i> aZ <i class="legend orange"></i> ambang</span><span id="std">σ 0.00 · ΔZ 0.00</span></div></section>
+      <section class="panel imu-panel"><div class="panel-head"><h2><span class="number">02</span> Respons IMU</h2><span class="metric-label">100 Hz SIM</span></div><div class="imu-reading"><strong id="az">0.00</strong><span>m/s²<small>percepatan vertikal tanpa gravitasi</small></span><span id="imuFlag" class="pill">KALIBRASI</span></div><canvas id="chart" aria-label="Grafik percepatan IMU; garis putus-putus adalah syarat puncak guncangan, titik jingga adalah pothole terkonfirmasi"></canvas><div class="panel-foot imu-legend"><span><i class="legend teal"></i> aZ <i class="legend orange"></i> <span id="imuThreshold">ambang puncak</span></span><span id="std" title="Statistik informasi, bukan syarat keputusan pothole">σ 0.00 · ΔZ 0.00 (info)</span></div><div class="imu-explanation"><p id="imuDecision" aria-live="polite">Menunggu kalibrasi sensor.</p><small>Melewati garis belum berarti pothole. Pola turun, integral guncangan, dan benturan naik juga diperiksa. Titik jingga menandai pola pothole terkonfirmasi.</small></div></section>
     </div>
     <div class="drive-bar panel"><span id="controller">⌨ KEYBOARD</span><div><kbd>W</kbd> kayuh <kbd>A</kbd><kbd>D</kbd> belok <kbd>S</kbd> rem <kbd>SPACE</kbd> berhenti</div><button id="auto" class="subtle">▷ Demo otomatis</button></div>
   </section>
