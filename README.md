@@ -1,4 +1,4 @@
-# Jaga Jalan — Simulasi Capstone B-08
+# Pit Hole — Simulasi Capstone B-08
 
 Simulasi sepeda 3D di **Gazebo Harmonic** dengan kamera, IMU, GPS, kendali keyboard/stik PS, server HTTP, penyimpanan SQLite, dan dashboard lokal. Dibuat berdasarkan *B-08_Naskah Proposal C251 Final.pdf* serta alur yang diminta pengguna.
 
