@@ -47,9 +47,9 @@ def build():
         return Paragraph(markup(s),styles[style])
     story=[]
     story += [Spacer(1,25),para('CAPSTONE B-08  /  DTETI FT UGM  /  2026','SmallID'),
-              para('Jaga Jalan<br/>Panduan simulasi'.replace('<br/>','\n'),'TitleID')]
+              para('Pit Hole<br/>Panduan simulasi'.replace('<br/>','\n'),'TitleID')]
     # Explicit HTML line break only for the cover.
-    story[-1]=Paragraph('Jaga Jalan<br/>Panduan simulasi',styles['TitleID'])
+    story[-1]=Paragraph('Pit Hole<br/>Panduan simulasi',styles['TitleID'])
     story += [para('Deteksi jalan rusak berbasis IMU dan vision\nuntuk pengendara sepeda.'),Spacer(1,12)]
     screenshot=DOC/'images/dashboard.png'
     if screenshot.exists():
@@ -151,12 +151,12 @@ def build():
         canvas.line(45,40,width-45,40)
         canvas.setFont('Body',7)
         canvas.setFillColor(muted)
-        canvas.drawString(45,27,'JAGA JALAN  /  CAPSTONE B-08  /  PANDUAN DEMONSTRASI')
+        canvas.drawString(45,27,'PIT HOLE  /  CAPSTONE B-08  /  PANDUAN DEMONSTRASI')
         canvas.drawRightString(width-45,27,str(doc.page))
         canvas.restoreState()
     pdf=DOC/'Panduan_Simulasi_Capstone_B08.pdf'
     document=SimpleDocTemplate(str(pdf),pagesize=A4,rightMargin=45,leftMargin=45,topMargin=40,bottomMargin=53,
-        title='Panduan Simulasi Capstone B-08 — Jaga Jalan',author='Capstone B-08',subject='Simulasi Gazebo IMU vision GPS dan buzzer')
+        title='Panduan Simulasi Capstone B-08 — Pit Hole',author='Capstone B-08',subject='Simulasi Gazebo IMU vision GPS dan buzzer')
     document.build(story,onFirstPage=decoration,onLaterPages=decoration)
     print(pdf)
 
