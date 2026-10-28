@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="id">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pit Hole · Capstone B-08</title><link rel="stylesheet" href="/style.css"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PitHole · Simulasi Sepeda</title><link rel="icon" type="image/svg+xml" href="/logo.svg"><link rel="stylesheet" href="/style.css"></head>
 <body>
 <header>
-  <a class="brand" href="/" aria-label="Pit Hole"><span class="brand-icon">↗</span><span>CAPSTONE B-08</span></a>
+  <a class="brand" href="/" aria-label="PitHole — Beranda simulasi"><img src="/logo.svg" alt="PitHole" width="120" height="36"><span class="simulation-label">Simulasi</span></a>
   <div class="header-center"><span class="live-dot" id="liveDot"></span> <span id="connection">MENGHUBUNGKAN GAZEBO</span><span class="divider">/</span> LAB SIMULASI SEPEDA</div>
   <div class="header-actions"><button id="sound" class="subtle">♬ Aktifkan suara</button><button id="fullscreen" class="icon-btn" title="Layar penuh">⛶</button><span id="clock">00:00:00</span></div>
 </header>
 <main>
   <section class="workspace">
-    <div class="intro"><div><p class="eyebrow">DETEKSI & PERINGATAN DINI JALAN RUSAK</p><h1>Satu perjalanan. Tiga lapis informasi.</h1></div><span class="version">GAZEBO HARMONIC <b>3D</b></span></div>
+    <div class="intro"><div><p class="eyebrow">DETEKSI & PERINGATAN DINI JALAN RUSAK</p><h1>Simulasi Sepeda PitHole</h1></div><span class="version">GAZEBO HARMONIC <b>3D</b></span></div>
     <section class="hero panel">
       <img id="mainCamera" src="/stream/chase" alt="Kamera mengikuti sepeda di lintasan Gazebo">
       <div class="hero-shade"></div>
@@ -45,7 +45,7 @@
     <section class="panel event-panel"><div class="panel-head"><h2>Jejak sistem</h2><span class="metric-label">REAL-TIME</span></div><div id="events"><p class="empty">Peristiwa sensor dan sinkronisasi muncul di sini.</p></div></section>
   </aside>
 </main>
-<footer><span><span class="footer-dot"></span> PROTOTIPE VIRTUAL / PAGELARAN DESEMBER 2026</span><span>IMU → simpan koordinat <em>·</em> Vision / database → buzzer</span><span id="health">MEMUAT SENSOR</span></footer>
+<footer><span><span class="footer-dot"></span> PITHOLE · CAPSTONE B-08 · SIMULASI SEPEDA</span><span>IMU → simpan koordinat <em>·</em> Vision / database → buzzer</span><span id="health">MEMUAT SENSOR</span></footer>
 <div id="toast" role="status" hidden></div>
 <script src="/app.js"></script>
 </body></html>
