@@ -80,15 +80,15 @@ function drawChart(s){
   const data=s.imu_history.filter(p=>p[0]>=t-span),threshold=s.config.imu.z_threshold;
   const max=Math.max(7,threshold*1.2,...data.map(p=>Math.abs(p[1])))*1.1;
   const y=v=>h/2-v/max*(h/2-12),x=p=>w-(t-p[0])/span*w;
-  c.strokeStyle='#33453e';c.lineWidth=.7;
+  c.strokeStyle='#E2E8F0';c.lineWidth=.7;
   for(const v of [-max/2,0,max/2]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}
-  c.setLineDash([3,4]);c.strokeStyle='#b89553';
+  c.setLineDash([3,4]);c.strokeStyle='#B45309';
   for(const v of [-threshold,threshold]){c.beginPath();c.moveTo(0,y(v));c.lineTo(w,y(v));c.stroke();}
   c.setLineDash([]);
-  if(data.length>1){c.beginPath();data.forEach((p,i)=>i?c.lineTo(x(p),y(p[1])):c.moveTo(x(p),y(p[1])));c.strokeStyle='#83d2b3';c.lineWidth=1.6;c.stroke();}
-  for(const p of data)if(p[2]==='pothole'){c.fillStyle='#f5b75a';c.beginPath();c.arc(x(p),y(p[1]),3.5,0,2*Math.PI);c.fill();}
-  c.font='8px monospace';c.fillStyle='#b89553';c.textAlign='right';c.fillText('±'+threshold.toFixed(1)+' m/s²',w-5,10);
-  c.textAlign='left';c.fillStyle='#7f9b8c';c.fillText('+'+max.toFixed(1),5,10);c.fillText('−'+max.toFixed(1),5,h-3);c.textAlign='right';c.fillText('4,5 dtk · skala Y otomatis',w-5,h-3);c.textAlign='left';
+  if(data.length>1){c.beginPath();data.forEach((p,i)=>i?c.lineTo(x(p),y(p[1])):c.moveTo(x(p),y(p[1])));c.strokeStyle='#01416B';c.lineWidth=1.6;c.stroke();}
+  for(const p of data)if(p[2]==='pothole'){c.fillStyle='#DD6B20';c.beginPath();c.arc(x(p),y(p[1]),3.5,0,2*Math.PI);c.fill();}
+  c.font='8px monospace';c.fillStyle='#B45309';c.textAlign='right';c.fillText('±'+threshold.toFixed(1)+' m/s²',w-5,10);
+  c.textAlign='left';c.fillStyle='#64748B';c.fillText('+'+max.toFixed(1),5,10);c.fillText('−'+max.toFixed(1),5,h-3);c.textAlign='right';c.fillText('4,5 dtk · skala Y otomatis',w-5,h-3);c.textAlign='left';
 }
 function renderImu(s){
   const imu=s.imu,a=imu.assessment,threshold=s.config.imu.z_threshold;
@@ -112,14 +112,14 @@ function drawMap(s){
   const scale=Math.min((w-30)/(l+2*r+16),(h-35)/(2*r+16));
   const mx=x=>w/2+(x-l/2)*scale,my=y=>h/2-(y-r)*scale;
   function stadium(){c.beginPath();c.moveTo(mx(0),my(0));c.lineTo(mx(l),my(0));c.arc(mx(l),my(r),r*scale,Math.PI/2,-Math.PI/2,true);c.lineTo(mx(0),my(2*r));c.arc(mx(0),my(r),r*scale,-Math.PI/2,Math.PI/2,true);c.closePath();}
-  stadium();c.strokeStyle='#43534c';c.lineWidth=t.width*scale;c.stroke();
-  stadium();c.strokeStyle='#9b9b71';c.lineWidth=.7;c.setLineDash([3,4]);c.stroke();c.setLineDash([]);
+  stadium();c.strokeStyle='#CBD5E1';c.lineWidth=t.width*scale;c.stroke();
+  stadium();c.strokeStyle='#64748B';c.lineWidth=.7;c.setLineDash([3,4]);c.stroke();c.setLineDash([]);
   const surface=s.config.surfaces;
-  c.strokeStyle='#b3a28b';c.lineWidth=t.width*scale;c.beginPath();c.moveTo(mx(l-surface.paving_start),my(2*r));c.lineTo(mx(l-surface.paving_start-surface.paving_length),my(2*r));c.stroke();
-  c.strokeStyle='#f0c35e';c.lineWidth=3;c.beginPath();c.moveTo(mx(surface.bump_x),my(-5));c.lineTo(mx(surface.bump_x),my(5));c.stroke();
-  c.fillStyle='#a8b9ac';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
-  for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#f5b75a';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}
-  c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#9be7c4';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();
+  c.strokeStyle='#94A3B8';c.lineWidth=t.width*scale;c.beginPath();c.moveTo(mx(l-surface.paving_start),my(2*r));c.lineTo(mx(l-surface.paving_start-surface.paving_length),my(2*r));c.stroke();
+  c.strokeStyle='#B45309';c.lineWidth=3;c.beginPath();c.moveTo(mx(surface.bump_x),my(-5));c.lineTo(mx(surface.bump_x),my(5));c.stroke();
+  c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
+  for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#DD6B20';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}
+  c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#01416B';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();
 }
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let lastEventKey='';
