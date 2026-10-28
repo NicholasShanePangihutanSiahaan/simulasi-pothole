@@ -66,7 +66,7 @@ def handler(runtime):
                 with runtime.lock:
                     frame=runtime.frames[kind]
                 self.reply(frame if frame else {'error':'menunggu kamera'},'image/jpeg' if frame else 'application/json',200 if frame else 503)
-            elif path in ('/','/app.js','/style.css'):
+            elif path in ('/','/app.js','/style.css','/logo.svg'):
                 file=STATIC/('index.html' if path=='/' else path[1:])
                 self.reply(file.read_bytes(),mimetypes.guess_type(file)[0] or 'text/plain')
             else:
