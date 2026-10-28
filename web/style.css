@@ -14,6 +14,11 @@ aside{display:flex;flex-direction:column;gap:16px;padding-top:2px}.alert-panel{d
 .steer-settings{display:grid;gap:6px;margin:10px 0 12px;padding:10px;background:#F0F4F9;border-radius:7px}.steer-settings label{display:flex;justify-content:space-between;align-items:center;color:#334155}.steer-settings output{color:var(--teal);font-family:monospace}.steer-settings input[type=range]{width:100%;height:18px;accent-color:var(--teal);cursor:pointer}.steer-settings button{font-size:9px;padding:6px;margin-top:2px}
 .imu-legend{flex-wrap:wrap;gap:6px}.imu-explanation{padding:0 16px 13px;color:var(--muted);font-size:9px;line-height:1.6}.imu-explanation p{margin:0 0 5px;color:var(--text)}.imu-explanation small{font-size:8px}.imu-reading .pill{max-width:105px;text-align:center}
 
+/* Explicit native popup colors keep scenario options readable across OS themes. */
+#scenario{color-scheme:light;color:#0F172A;background-color:#FFFFFF}
+#scenario option{color:#0F172A;background-color:#FFFFFF}
+#scenario option:checked{color:#FFFFFF;background-color:#01416B}
+
 /* PitHole identity, shared with the website frontend2. */
 header{background:#fff;box-shadow:0 2px 4px #00000005}
 .brand{flex-shrink:0;gap:14px;letter-spacing:0}.brand img{display:block;width:auto;height:36px}
@@ -25,3 +30,16 @@ h1{color:#01416B;font-weight:800}h2{font-weight:700}.panel{box-shadow:0 4px 16px
 .road-alert{background:#FDD402;color:#0F172A}.warning .led{box-shadow:0 0 13px #DD6B2066}
 footer{background:#fff}.event time,.event p{color:#64748B}
 @media(max-width:440px){header{padding:0 12px;gap:8px}.brand{gap:6px}.brand img{height:28px}.simulation-label{font-size:9px;padding:4px}.header-actions .subtle{padding:6px;font-size:10px}}
+
+/* In-page scenario menu avoids native browser/OS popup rendering problems. */
+.scenario-row{flex-wrap:wrap}
+.scenario-row .scenario-picker{flex:1;min-width:0;border:0;padding:0;color:#0F172A;font-size:11px}
+.scenario-picker summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid #CBD5E1;border-radius:5px;padding:8px;background:#FFFFFF;color:#0F172A;cursor:pointer}
+.scenario-picker summary::-webkit-details-marker{display:none}
+.scenario-picker summary::after{content:'▾';color:#01416B}
+.scenario-picker[open] summary{margin-bottom:0}
+.scenario-choices{display:grid;max-height:290px;overflow-y:auto;padding:4px;border:1px solid #CBD5E1;border-radius:6px;background:#FFFFFF;margin-top:5px}
+.scenario-choices button{display:block;width:100%;text-align:left;white-space:normal;font-size:12px;line-height:1.5;padding:9px 10px;border:0;border-radius:4px;background:#FFFFFF;color:#0F172A}
+.scenario-choices button:hover,.scenario-choices button:focus-visible{background:#E2E8F0;color:#01416B}
+.scenario-choices button[aria-pressed="true"]{background:#01416B;color:#FFFFFF}
+.scenario-row:has(.scenario-picker[open]){align-items:flex-start}
