@@ -154,3 +154,31 @@ function render(s){
 async function poll(){try{const r=await fetch('/api/state');if(!r.ok)throw Error('server');state=await r.json();render(state);}catch(e){$('connection').textContent='DASHBOARD TERPUTUS';$('liveDot').classList.remove('ready');$('alertTitle').textContent='Koneksi terputus';$('alertDetail').textContent='Periksa terminal launcher. Sepeda direm otomatis.';}setTimeout(poll,150);}
 setInterval(()=>$('clock').textContent=new Date().toLocaleTimeString('id-ID',{hour12:false}).replaceAll('.',':'),1000);
 poll();
+
+// Render scenario choices in the page; native OS popups can render blank on Linux.
+{
+  const select=$('scenario');
+  const picker=document.createElement('details');picker.className='scenario-picker';
+  const summary=document.createElement('summary');summary.id='scenarioPicker';
+  summary.textContent=select.selectedOptions[0].textContent;
+  const choices=document.createElement('div');choices.className='scenario-choices';
+  for(const option of select.options){
+    const button=document.createElement('button');button.type='button';
+    button.textContent=option.textContent;
+    button.setAttribute('aria-pressed',String(option.selected));
+    button.onclick=()=>{
+      select.value=option.value;summary.textContent=option.textContent;
+      for(const item of choices.children)item.setAttribute('aria-pressed',String(item===button));
+      select.dispatchEvent(new Event('change',{bubbles:true}));
+      picker.open=false;summary.focus();
+    };
+    choices.append(button);
+  }
+  picker.append(summary,choices);select.after(picker);select.hidden=true;
+  document.querySelector('label[for="scenario"]').onclick=()=>summary.focus();
+  summary.setAttribute('aria-label','Mulai dari: '+summary.textContent);
+  select.addEventListener('change',()=>summary.setAttribute('aria-label','Mulai dari: '+summary.textContent));
+  picker.addEventListener('keydown',event=>{if(event.key==='Escape'){picker.open=false;summary.focus();}});
+  document.addEventListener('click',event=>{if(!picker.contains(event.target))picker.open=false;});
+  picker.addEventListener('focusout',()=>{setTimeout(()=>{if(!picker.contains(document.activeElement))picker.open=false;},0);});
+}
