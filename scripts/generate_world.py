@@ -130,7 +130,7 @@ def road_tile(label, x0, x1, hole=None, surface='asphalt'):
         rgb[~stripe]=np.array([95,96,96],dtype='uint8')
     elif surface=='crack':
         # Narrow branching hairline cracks, not dark filled pothole silhouettes.
-        line=CFG['surfaces']['crack_x']+.15*np.sin(yy*5)+.08*np.sin(yy*13)
+        line=(x0+x1)/2+.15*np.sin(yy*5)+.08*np.sin(yy*13)
         mask=(np.abs(xx-line)<.025) | ((yy>-2)&(yy<2)&(np.abs(xx-line-.5*(yy+2))<.018))
         rgb[mask]=[46,47,48]
     Image.fromarray(rgb).save(ASSETS/f'{label}.png')
@@ -261,20 +261,43 @@ def generate():
     straight,radius=track['straight'],track['radius']
     total=track_length(track)
     assert 0<surf['paving_length']<total/2
-    cursor = 0
     shoulder_width = 1.25
     shoulder_top = 0.45
     shoulder_bottom = -0.30
-    sections=[(h['x']-2,h['x']+2,'hole_'+h['name'],h,'asphalt') for h in CFG['potholes']]
-    sections += [(surf['crack_x']-2,surf['crack_x']+2,'cracks',None,'crack'),
-                 (surf['bump_x']-surf['bump_length']/2,surf['bump_x']+surf['bump_length']/2,'speed_bump',None,'bump')]
-    for x0,x1,label,hole,surface in sorted(sections):
-        road += road_tile('before_'+label,cursor,x0)
-        road += road_tile(label,x0,x1,hole,surface)
-        cursor = x1
-    road += road_tile('road_end',cursor,straight)
-    p0=surf['paving_start'];p1=p0+surf['paving_length']
-    upper=road_tile('upper_start',0,p0)+road_tile('paving',p0,p1,surface='paving')+road_tile('upper_end',p1,straight)
+    def straight_sections(segment):
+        sections=[]
+        for original in CFG['potholes']:
+            if original.get('segment','lower') != segment:
+                continue
+            hole=dict(original)
+            if segment=='upper':
+                hole['x']=straight-hole['x']
+                hole['y']=2*radius-hole['y']
+            assert abs(hole['y'])+1.25 < track['width']/2
+            assert hole['rx']*1.13 < 2 and hole['ry']*1.13 < 1.25
+            sections.append((hole['x']-2,hole['x']+2,'hole_'+hole['name'],hole,'asphalt'))
+        if segment=='lower':
+            sections.extend([(surf['crack_x']-2,surf['crack_x']+2,'cracks',None,'crack'),
+                             (surf['bump_x']-surf['bump_length']/2,surf['bump_x']+surf['bump_length']/2,'speed_bump',None,'bump')])
+        else:
+            sections.append((surf['paving_start'],surf['paving_start']+surf['paving_length'],'paving',None,'paving'))
+        for i,extra in enumerate(CFG.get('extra_surfaces',[])):
+            if extra['segment']==segment:
+                sections.append((extra['start'],extra['end'],f'extra_{i}',None,extra['type']))
+        result=''
+        cursor=0
+        for x0,x1,label,hole,surface in sorted(sections):
+            if not 0 <= cursor <= x0 < x1 <= straight:
+                raise ValueError(f'Overlapping or out-of-bounds road section: {label}')
+            if x0>cursor:
+                result+=road_tile(segment+'_before_'+label,cursor,x0)
+            result+=road_tile(label,x0,x1,hole,surface)
+            cursor=x1
+        if cursor<straight:
+            result+=road_tile(segment+'_end',cursor,straight)
+        return result
+    road += straight_sections('lower')
+    upper = straight_sections('upper')
     road += ribbon('right_turn',straight,straight+math.pi*radius,0,12,'0.39 0.40 0.42 1',True,0)
     road += ribbon('left_turn',2*straight+math.pi*radius,total,0,12,'0.39 0.40 0.42 1',True,0)
     road += box('ground',(straight/2,radius,-.40),(straight+2*radius+80,2*radius+100,.25),'0.28 0.40 0.20',True)
@@ -301,13 +324,13 @@ def generate():
         road += box('start_line'+str(i),(4,-5.5+i,.01),(.45,.95,.015),'0.9 0.9 0.85' if i%2 else '0.12 0.13 0.14')
     scenery = ''
     rng = np.random.default_rng(17)
-    for i,x in enumerate(range(-4,153,12)):
+    for i,x in enumerate(range(-4,int(straight)+1,18)):
         for side in (-1,1):
             y = -10 if side<0 else 2*radius+10
             name = f'{i}_{side}'
             scenery += tube('trunk'+name,(x,y,-.2),(x,y,3.8),.19,'0.28 0.19 0.12')
-            scenery += sphere('crown'+name,(x,y,4.2),1.8,'0.15 0.34 0.15')
-            scenery += sphere('crown2'+name,(x+.8,y,5),1.25,'0.22 0.43 0.19')
+            scenery += sphere('crown_main_'+name,(x,y,4.2),1.8,'0.15 0.34 0.15')
+            scenery += sphere('crown_secondary_'+name,(x+.8,y,5),1.25,'0.22 0.43 0.19')
             if i%2==0:
                 lx,ly=x+4,(-8 if side<0 else 2*radius+8)
                 scenery += tube('pole'+name,(lx,ly,0),(lx,ly,5.5),.055,'0.21 0.25 0.27')
@@ -339,7 +362,19 @@ def generate():
     <model name="road"><static>true</static><link name="surface">{road}</link><link name="upper"><pose>{straight} {2*radius} 0 0 0 {math.pi}</pose>{upper}</link></model>
     <model name="campus"><static>true</static><link name="scenery">{scenery}</link></model>
     {bicycle()}</world></sdf>'''
-    ET.fromstring(text)
+    root = ET.fromstring(text)
+    # SDF names must be unique within each parent and element type.
+    # XML parsing alone accepts duplicates that prevent Gazebo startup.
+    for parent in root.iter():
+        names = set()
+        for child in parent:
+            name = child.get('name')
+            if name is None:
+                continue
+            key = (child.tag, name)
+            if key in names:
+                raise ValueError(f'Duplicate SDF {child.tag} name: {name}')
+            names.add(key)
     (OUT/'capstone.sdf').write_text(text)
     print(f'World siap: {OUT / "capstone.sdf"}')
 
