@@ -207,7 +207,7 @@ class Runtime:
                  'small':(76,2,0),'crack':(33,-2,0),'bump':(86,-2,0),
                  'paving':(self.cfg['track']['straight']-self.cfg['surfaces']['paving_start']+8,
                            2*self.cfg['track']['radius']+2,math.pi),
-                 'curve':(150,-2,0)}
+                 'curve':(self.cfg['track']['straight']-10,-2,0)}
         if scenario not in presets:
             raise ValueError('Skenario tidak dikenal')
         x,y,yaw=presets[scenario]
