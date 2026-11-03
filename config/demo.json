@@ -1,15 +1,307 @@
 {
-  "track": {"straight": 160.0, "radius": 30.0, "width": 12.0, "lane": -2.0},
-  "surfaces": {"paving_start": 50.0, "paving_length": 60.0, "bump_x": 95.0, "bump_length": 3.0, "bump_height": 0.08, "crack_x": 40.0},
-  "origin": {"latitude": -7.7653, "longitude": 110.3725, "altitude": 120.0},
-  "imu": {"sample_rate": 100, "window": 20, "z_threshold": 4.5, "diff_threshold": 3.8, "std_threshold": 1.5, "cooldown": 2.5},
-  "vision": {"max_distance": 3.0, "camera_height": 1.08, "camera_pitch": 0.30, "hfov": 1.20, "dark_threshold": 63, "min_area": 24},
-  "warning": {"radius": 15.0, "corridor": 1.6, "min_speed": 0.35, "lookahead_seconds": 4.0},
-  "sync": {"interval": 2.0, "merge_radius": 2.5},
+  "track": {
+    "straight": 420.0,
+    "radius": 50.0,
+    "width": 12.0,
+    "lane": -2.0
+  },
+  "surfaces": {
+    "paving_start": 50.0,
+    "paving_length": 60.0,
+    "bump_x": 95.0,
+    "bump_length": 3.0,
+    "bump_height": 0.08,
+    "crack_x": 40.0
+  },
+  "origin": {
+    "latitude": -7.7653,
+    "longitude": 110.3725,
+    "altitude": 120.0
+  },
+  "imu": {
+    "sample_rate": 100,
+    "window": 20,
+    "z_threshold": 4.5,
+    "diff_threshold": 3.8,
+    "std_threshold": 1.5,
+    "cooldown": 2.5
+  },
+  "vision": {
+    "max_distance": 3.0,
+    "camera_height": 1.08,
+    "camera_pitch": 0.3,
+    "hfov": 1.2,
+    "dark_threshold": 63,
+    "min_area": 24
+  },
+  "warning": {
+    "radius": 15.0,
+    "corridor": 1.6,
+    "min_speed": 0.35,
+    "lookahead_seconds": 4.0
+  },
+  "sync": {
+    "interval": 2.0,
+    "merge_radius": 2.5
+  },
   "potholes": [
-    {"name": "A", "x": 24, "y": -2, "rx": 0.90, "ry": 0.68, "depth": 0.12},
-    {"name": "B", "x": 58, "y": -2, "rx": 1.1, "ry": 0.76, "depth": 0.17},
-    {"name": "C", "x": 83, "y": 2, "rx": 0.72, "ry": 0.6, "depth": 0.09},
-    {"name": "D", "x": 115, "y": -2, "rx": 1.25, "ry": 0.8, "depth": 0.15}
+    {
+      "name": "A",
+      "x": 24,
+      "y": -2,
+      "rx": 0.9,
+      "ry": 0.68,
+      "depth": 0.12
+    },
+    {
+      "name": "B",
+      "x": 58,
+      "y": -2,
+      "rx": 1.1,
+      "ry": 0.76,
+      "depth": 0.17
+    },
+    {
+      "name": "C",
+      "x": 83,
+      "y": 2,
+      "rx": 0.72,
+      "ry": 0.6,
+      "depth": 0.09
+    },
+    {
+      "name": "D",
+      "x": 115,
+      "y": -2,
+      "rx": 1.25,
+      "ry": 0.8,
+      "depth": 0.15
+    },
+    {
+      "name": "E01",
+      "x": 145,
+      "y": -2,
+      "rx": 0.65,
+      "ry": 0.5,
+      "depth": 0.07
+    },
+    {
+      "name": "E02",
+      "x": 172,
+      "y": 1.5,
+      "rx": 0.95,
+      "ry": 0.7,
+      "depth": 0.11
+    },
+    {
+      "name": "E03",
+      "x": 198,
+      "y": -3.2,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.16
+    },
+    {
+      "name": "E04",
+      "x": 224,
+      "y": -2,
+      "rx": 0.65,
+      "ry": 0.5,
+      "depth": 0.2
+    },
+    {
+      "name": "E05",
+      "x": 251,
+      "y": 3,
+      "rx": 0.95,
+      "ry": 0.7,
+      "depth": 0.07
+    },
+    {
+      "name": "E06",
+      "x": 278,
+      "y": -1.6,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.11
+    },
+    {
+      "name": "E07",
+      "x": 305,
+      "y": 2.4,
+      "rx": 0.65,
+      "ry": 0.5,
+      "depth": 0.16
+    },
+    {
+      "name": "E08",
+      "x": 332,
+      "y": -2,
+      "rx": 0.95,
+      "ry": 0.7,
+      "depth": 0.2
+    },
+    {
+      "name": "E09",
+      "x": 359,
+      "y": -3,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.07
+    },
+    {
+      "name": "E10",
+      "x": 390,
+      "y": 1,
+      "rx": 0.65,
+      "ry": 0.5,
+      "depth": 0.11
+    },
+    {
+      "name": "U01",
+      "x": 398,
+      "y": 102,
+      "rx": 0.7,
+      "ry": 0.5,
+      "depth": 0.08,
+      "segment": "upper"
+    },
+    {
+      "name": "U02",
+      "x": 384,
+      "y": 103,
+      "rx": 1.05,
+      "ry": 0.7,
+      "depth": 0.13,
+      "segment": "upper"
+    },
+    {
+      "name": "U03",
+      "x": 290,
+      "y": 98,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.18,
+      "segment": "upper"
+    },
+    {
+      "name": "U04",
+      "x": 269,
+      "y": 102,
+      "rx": 0.7,
+      "ry": 0.5,
+      "depth": 0.08,
+      "segment": "upper"
+    },
+    {
+      "name": "U05",
+      "x": 240,
+      "y": 98.5,
+      "rx": 1.05,
+      "ry": 0.7,
+      "depth": 0.13,
+      "segment": "upper"
+    },
+    {
+      "name": "U06",
+      "x": 213,
+      "y": 102,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.18,
+      "segment": "upper"
+    },
+    {
+      "name": "U07",
+      "x": 185,
+      "y": 97,
+      "rx": 0.7,
+      "ry": 0.5,
+      "depth": 0.08,
+      "segment": "upper"
+    },
+    {
+      "name": "U08",
+      "x": 153,
+      "y": 101.8,
+      "rx": 1.05,
+      "ry": 0.7,
+      "depth": 0.13,
+      "segment": "upper"
+    },
+    {
+      "name": "U09",
+      "x": 126,
+      "y": 102,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.18,
+      "segment": "upper"
+    },
+    {
+      "name": "U10",
+      "x": 98,
+      "y": 97.5,
+      "rx": 0.7,
+      "ry": 0.5,
+      "depth": 0.08,
+      "segment": "upper"
+    },
+    {
+      "name": "U11",
+      "x": 69,
+      "y": 103,
+      "rx": 1.05,
+      "ry": 0.7,
+      "depth": 0.13,
+      "segment": "upper"
+    },
+    {
+      "name": "U12",
+      "x": 38,
+      "y": 102,
+      "rx": 1.3,
+      "ry": 0.85,
+      "depth": 0.18,
+      "segment": "upper"
+    }
+  ],
+  "extra_surfaces": [
+    {
+      "segment": "lower",
+      "start": 157,
+      "end": 161,
+      "type": "crack"
+    },
+    {
+      "segment": "lower",
+      "start": 238,
+      "end": 241,
+      "type": "bump"
+    },
+    {
+      "segment": "lower",
+      "start": 365,
+      "end": 381,
+      "type": "paving"
+    },
+    {
+      "segment": "upper",
+      "start": 162,
+      "end": 166,
+      "type": "crack"
+    },
+    {
+      "segment": "upper",
+      "start": 245,
+      "end": 248,
+      "type": "bump"
+    },
+    {
+      "segment": "upper",
+      "start": 395,
+      "end": 413,
+      "type": "paving"
+    }
   ]
 }
