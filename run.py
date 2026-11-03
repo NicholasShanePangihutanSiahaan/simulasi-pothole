@@ -51,6 +51,14 @@ def main():
     env['GZ_HOMEDIR']=str(data/'gazebo')
     env['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION']='python'
     env['PYTHONNOUSERSITE']='1'
+    if args.gui:
+        # Avoid GTK platform-theme initialization: mismatched GNOME schemas
+        # can abort Qt before the Gazebo window is created.
+        env['QT_QPA_PLATFORMTHEME']='generic'
+        env['QT_STYLE_OVERRIDE']='Fusion'
+        if env.get('DISPLAY'):
+            env['QT_QPA_PLATFORM']='xcb'
+            env['GDK_BACKEND']='x11'
     py='/usr/bin/python3'
     if not args.skip_build or not (ROOT/'build/libBicycleSystem.so').exists():
         subprocess.run(['cmake','-S',str(ROOT),'-B',str(ROOT/'build'),'-DCMAKE_BUILD_TYPE=Release'],env=env,check=True,stdout=subprocess.DEVNULL)
