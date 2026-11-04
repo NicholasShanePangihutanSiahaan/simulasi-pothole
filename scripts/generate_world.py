@@ -85,8 +85,12 @@ def dae(path, points, faces, uv=None, texture=None, color="0.16 0.17 0.18 1"):
 
 
 def road_tile(label, x0, x1, hole=None, surface='asphalt'):
-    nx, ny = (61, 121) if hole else ((601, 2) if surface=='paving' else (61, 2) if surface=='bump' else (2, 2))
+    nx, ny = (61, 43) if hole else ((601, 2) if surface=='paving' else (61, 2) if surface=='bump' else (2, 2))
     xs, ys = np.linspace(x0, x1, nx), np.linspace(-6, 6, ny)
+    if hole:
+        # Preserve the 61 x 41 contact grid around the depression; the flat
+        # adjacent lanes only need one row at each road edge for rendering.
+        ys = np.concatenate(([-6], np.linspace(hole['y']-1.25, hole['y']+1.25, 41), [6]))
     points, uvs = [], []
     def depression(x, y):
         if surface=='bump':
@@ -210,8 +214,10 @@ def bicycle():
         frame += tube('thigh'+s,(-.31,.10*side,.40),(.04,.14*side,.03),.08,'0.075 0.105 0.15')
         frame += tube('shin'+s,(.04,.14*side,.03),(-.17,.17*side,-.30),.05,'0.64 0.42 0.29')
         frame += box('shoe'+s,(-.12,.17*side,-.30),(.24,.10,.08),dark)
+    camera_far = float(CFG.get('rendering',{}).get('camera_far',100))
     camera = '''<sensor name="road_camera" type="camera"><pose>.45 0 .36 0 .30 0</pose><topic>/capstone/camera</topic><update_rate>15</update_rate><always_on>true</always_on><camera><horizontal_fov>1.20</horizontal_fov><image><width>640</width><height>360</height><format>R8G8B8</format></image><clip><near>.08</near><far>180</far></clip></camera></sensor>
     <sensor name="chase_camera" type="camera"><pose>-4.5 0 2.60 0 .36 0</pose><topic>/capstone/chase</topic><update_rate>15</update_rate><always_on>true</always_on><camera><horizontal_fov>1.20</horizontal_fov><image><width>960</width><height>540</height><format>R8G8B8</format></image><clip><near>.1</near><far>180</far></clip></camera></sensor>'''
+    camera = camera.replace('<far>180</far>', f'<far>{camera_far}</far>')
     imu = '<sensor name="imu" type="imu"><always_on>true</always_on><update_rate>100</update_rate><topic>/capstone/imu</topic><imu><linear_acceleration>'
     imu += ''.join(f'<{axis}><noise type="gaussian"><mean>0</mean><stddev>0.045</stddev></noise></{axis}>' for axis in 'xyz')
     imu += '</linear_acceleration></imu></sensor>'
@@ -251,6 +257,39 @@ def ribbon(label, start, end, offset, width, color, collision=False, z=.006):
         faces.extend([(a,a+2,a+1),(a+1,a+2,a+3)])
     dae(ASSETS/f'{label}.dae',points,faces,color=color)
     return mesh(label,f'{label}.dae',collision)
+
+
+def batch_box_visuals(fragment, label):
+    """Merge static, flat-shaded boxes by material to reduce render draw calls."""
+    root = ET.fromstring('<link>'+fragment+'</link>')
+    groups = {}
+    for visual in list(root.findall('visual')):
+        size = visual.findtext('geometry/box/size')
+        if size is None:
+            continue
+        color = visual.findtext('material/diffuse')
+        points, faces = groups.setdefault(color, ([], []))
+        x,y,z,roll,pitch,yaw = map(float,visual.findtext('pose').split())
+        if roll or pitch:
+            raise ValueError('Box batching supports yaw rotation only')
+        sx,sy,sz = (float(v)/2 for v in size.split())
+        # Independent vertices per face preserve sharp box normals.
+        corners=[(-sx,-sy,-sz),(sx,-sy,-sz),(sx,sy,-sz),(-sx,sy,-sz),
+                 (-sx,-sy,sz),(sx,-sy,sz),(sx,sy,sz),(-sx,sy,sz)]
+        for quad in ((0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)):
+            start=len(points)
+            for corner in quad:
+                dx,dy,dz=corners[corner]
+                points.append((x+dx*math.cos(yaw)-dy*math.sin(yaw),
+                               y+dx*math.sin(yaw)+dy*math.cos(yaw),z+dz))
+            faces.extend(((start,start+1,start+2),(start,start+2,start+3)))
+        root.remove(visual)
+    result=''.join(ET.tostring(child,encoding='unicode') for child in root)
+    for i,(color,(points,faces)) in enumerate(groups.items()):
+        name=f'{label}_boxes_{i}'
+        dae(ASSETS/f'{name}.dae',points,faces,color=color)
+        result+=mesh(name,f'{name}.dae')
+    return result
 
 
 def generate():
@@ -306,7 +345,12 @@ def generate():
             'edge_'+str(side), 0, total, side*5.8, .12, '0.90 0.90 0.81 1'
         )
         offset = side * (track['width']/2 + shoulder_width/2)
-        samples = np.linspace(0, total, int(math.ceil(total))+1)
+        # Straight shoulders are single boxes. Three-metre arc chords deviate
+        # less than 3 cm at radius 50 m; keep overlap to close every join.
+        samples = np.concatenate(([0, straight],
+            np.linspace(straight, straight+math.pi*radius, int(math.ceil(math.pi*radius/3))+1)[1:],
+            [2*straight+math.pi*radius],
+            np.linspace(2*straight+math.pi*radius, total, int(math.ceil(math.pi*radius/3))+1)[1:]))
         for i, (s0,s1) in enumerate(zip(samples[:-1], samples[1:])):
             x0, y0, _ = track_point(s0, track, offset)
             x1, y1, _ = track_point(s1, track, offset)
@@ -349,15 +393,18 @@ def generate():
         scenery += box('field_line'+str(i),(80,y,-.265),(110,.12,.012),'0.85 0.87 0.78')
     for i,x in enumerate((25,80,135)):
         scenery += box('field_cross'+str(i),(x,30,-.265),(.12,24,.012),'0.85 0.87 0.78')
+    road=batch_box_visuals(road,'road')
+    scenery=batch_box_visuals(scenery,'campus')
     origin=CFG['origin']
     plugins=''.join(f'<plugin filename="gz-sim-{file}-system" name="gz::sim::systems::{name}"/>' for file,name in [('physics','Physics'),('user-commands','UserCommands'),('scene-broadcaster','SceneBroadcaster'),('imu','Imu'),('navsat','NavSat')])
+    shadows = str(CFG.get('rendering',{}).get('shadows',False)).lower()
     text=f'''<?xml version="1.0"?><sdf version="1.9"><world name="capstone">
     <physics name="physics" type="ignored"><max_step_size>0.002</max_step_size><real_time_factor>1</real_time_factor></physics>
     <gravity>0 0 -9.81</gravity>{plugins}
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"><render_engine>ogre2</render_engine></plugin>
     <spherical_coordinates><surface_model>EARTH_WGS84</surface_model><world_frame_orientation>ENU</world_frame_orientation><latitude_deg>{origin['latitude']}</latitude_deg><longitude_deg>{origin['longitude']}</longitude_deg><elevation>{origin['altitude']}</elevation><heading_deg>0</heading_deg></spherical_coordinates>
-    <scene><ambient>.7 .7 .7 1</ambient><background>.62 .77 .87 1</background><shadows>true</shadows><grid>false</grid></scene>
-    <light type="directional" name="sun"><pose>0 0 30 0 0 0</pose><diffuse>.95 .91 .82 1</diffuse><specular>.15 .15 .15 1</specular><direction>-.4 -.2 -1</direction><cast_shadows>true</cast_shadows></light>
+    <scene><ambient>.7 .7 .7 1</ambient><background>.62 .77 .87 1</background><shadows>{shadows}</shadows><grid>false</grid></scene>
+    <light type="directional" name="sun"><pose>0 0 30 0 0 0</pose><diffuse>.95 .91 .82 1</diffuse><specular>.15 .15 .15 1</specular><direction>-.4 -.2 -1</direction><cast_shadows>{shadows}</cast_shadows></light>
     <gui fullscreen="false"><plugin filename="MinimalScene" name="3D View"><gz-gui><title>Lintasan Capstone B-08</title><property type="bool" key="showTitleBar">false</property><property type="string" key="state">docked</property></gz-gui><engine>ogre2</engine><scene>scene</scene><ambient_light>.7 .7 .7</ambient_light><background_color>.62 .77 .87</background_color><camera_pose>-4 -10 7 0 .35 .55</camera_pose></plugin><plugin filename="GzSceneManager" name="Scene Manager"/><plugin filename="InteractiveViewControl" name="View Control"/><plugin filename="CameraTracking" name="Camera Tracking"/><plugin filename="WorldControl" name="World Control"><gz-gui><property type="string" key="state">floating</property></gz-gui><start_paused>false</start_paused></plugin></gui>
     <model name="road"><static>true</static><link name="surface">{road}</link><link name="upper"><pose>{straight} {2*radius} 0 0 0 {math.pi}</pose>{upper}</link></model>
     <model name="campus"><static>true</static><link name="scenery">{scenery}</link></model>
