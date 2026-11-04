@@ -303,5 +303,9 @@
       "end": 413,
       "type": "paving"
     }
-  ]
+  ],
+  "rendering": {
+    "shadows": false,
+    "camera_far": 100.0
+  }
 }
