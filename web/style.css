@@ -43,3 +43,8 @@ footer{background:#fff}.event time,.event p{color:#64748B}
 .scenario-choices button:hover,.scenario-choices button:focus-visible{background:#E2E8F0;color:#01416B}
 .scenario-choices button[aria-pressed="true"]{background:#01416B;color:#FFFFFF}
 .scenario-row:has(.scenario-picker[open]){align-items:flex-start}
+
+/* Surface zones are separate from synchronized hazard reports. */
+.surface-legend{display:flex;flex-wrap:wrap;gap:8px 12px;padding:0 16px 12px;font-size:9px;color:var(--muted)}
+.surface-key{display:inline-block;width:10px;height:5px;margin-right:5px;vertical-align:middle;border-radius:1px}
+.surface-key.paving{background:#94A3B8}.surface-key.bump{background:#B45309}.surface-key.crack{background:#7C3AED}
