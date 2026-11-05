@@ -1,5 +1,6 @@
 // A virtual rider applies propulsion, lateral tire assistance and balance torque.
 // Vertical motion, pitch, gravity and wheel/road contact remain in Gazebo physics.
+#include "SteeringControl.hh"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -36,7 +37,7 @@ class BicycleSystem final : public gz::sim::System,
   gz::math::Pose3d resetPose;
   std::chrono::steady_clock::time_point commandTime{};
   double lastPublish{-1};
-  double headingTarget{0};
+  SteeringControl steeringControl;
   double trackStraight{160}, trackRadius{30}, trackWidth{12};
 
  public:
@@ -85,7 +86,7 @@ class BicycleSystem final : public gz::sim::System,
     }
     if (resetting) {
       model.SetWorldPoseCmd(ecm, resetPose);
-      headingTarget = resetPose.Rot().Yaw();
+      steeringControl.Reset();
       for (auto entity : model.Links(ecm)) {
         gz::sim::Link link(entity);
         link.SetLinearVelocity(ecm, gz::math::Vector3d::Zero);
@@ -111,14 +112,15 @@ class BicycleSystem final : public gz::sim::System,
     const double yaw = pose.Rot().Yaw();
     const double v = worldV.X()*std::cos(yaw) + worldV.Y()*std::sin(yaw);
     const double lateralV = -worldV.X()*std::sin(yaw) + worldV.Y()*std::cos(yaw);
-    const double delta = steer * .48;
+    const double delta = steeringControl.Update(stale ? 0 : steer, v,
+        std::chrono::duration<double>(info.dt).count());
     const double desiredYawRate = v * std::tan(delta) / 1.16;
     // Virtual rider balances even at a standstill. Roll lean is modest for an exhibit.
     const double lean = std::clamp(-std::atan(v * desiredYawRate / 9.81), -.20, .20);
     const double rollTorque = 3500 * (lean - pose.Rot().Roll()) - 350 * bodyW.X();
-    headingTarget += desiredYawRate * std::chrono::duration<double>(info.dt).count();
-    const double headingError = std::atan2(std::sin(headingTarget-yaw), std::cos(headingTarget-yaw));
-    const double yawTorque = std::clamp(1600*headingError + 320*(desiredYawRate-worldW.Z()), -1200., 1200.);
+    // Track turn rate directly: no accumulated heading target to keep turning
+    // after release, or fight a requested reversal when the tires lag behind.
+    const double yawTorque = std::clamp(320*(desiredYawRate-worldW.Z()), -1200., 1200.);
     const double limitedThrottle = t > 0 && v > 6.5 ? t * std::clamp((7.0-v)/.5, 0., 1.) : t;
     const double drive = 150 * limitedThrottle - 2.5 * v - .65 * v * std::abs(v) - b * 250 * v;
     const double forceX = std::clamp(drive, -380., 210.);
@@ -134,8 +136,10 @@ class BicycleSystem final : public gz::sim::System,
     const auto vel = ecm.Component<gz::sim::components::JointVelocity>(steering);
     double angle = pos && !pos->Data().empty() ? pos->Data()[0] : 0;
     double rate = vel && !vel->Data().empty() ? vel->Data()[0] : 0;
+    // Hold the commanded front-wheel angle against tire forces; the softer
+    // servo allowed a growing turn even after the requested angle returned to zero.
     ecm.SetComponentData<gz::sim::components::JointForceCmd>(steering,
-        {std::clamp(700*(delta-angle)-45*rate, -220., 220.)});
+        {std::clamp(2500*(delta-angle)-100*rate, -220., 220.)});
   }
   void PostUpdate(const gz::sim::UpdateInfo &info,
       const gz::sim::EntityComponentManager &ecm) override {
