@@ -48,3 +48,9 @@ footer{background:#fff}.event time,.event p{color:#64748B}
 .surface-legend{display:flex;flex-wrap:wrap;gap:8px 12px;padding:0 16px 12px;font-size:9px;color:var(--muted)}
 .surface-key{display:inline-block;width:10px;height:5px;margin-right:5px;vertical-align:middle;border-radius:1px}
 .surface-key.paving{background:#94A3B8}.surface-key.bump{background:#B45309}.surface-key.crack{background:#7C3AED}
+
+/* Give the live simulation the space previously occupied by the page intro. */
+main{max-width:1920px}
+.hero{height:clamp(400px,70vh,800px)}
+@media(max-width:1100px) and (min-width:761px){.hero{height:clamp(380px,65vh,650px)}}
+@media(max-width:760px){.hero{height:auto;aspect-ratio:16/10}.hero>img{position:absolute;inset:0}}
