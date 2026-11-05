@@ -70,6 +70,9 @@ setInterval(async()=>{
   if(!focused){throttle=targetSteer=0;brake=1;}
   const response=steeringSettings().response;
   const maxStep=.035+.315*response;
+  // Release immediately at the input layer; the physics controller supplies
+  // the mechanical slew. Do not keep sending the old direction on reversal.
+  if(targetSteer===0||targetSteer*smoothSteer<0)smoothSteer=0;
   smoothSteer+=Math.max(-maxStep,Math.min(maxStep,targetSteer-smoothSteer));
   if(Math.abs(smoothSteer)<.004&&targetSteer===0)smoothSteer=0;
   sending=true;try{await post('/api/control',{throttle,steer:smoothSteer,brake});}catch(e){/* state polling reports connectivity */}finally{sending=false;}
