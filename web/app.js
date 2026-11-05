@@ -115,11 +115,30 @@ function drawMap(s){
   stadium();c.strokeStyle='#CBD5E1';c.lineWidth=t.width*scale;c.stroke();
   stadium();c.strokeStyle='#64748B';c.lineWidth=.7;c.setLineDash([3,4]);c.stroke();c.setLineDash([]);
   const surface=s.config.surfaces;
-  c.strokeStyle='#94A3B8';c.lineWidth=t.width*scale;c.beginPath();c.moveTo(mx(l-surface.paving_start),my(2*r));c.lineTo(mx(l-surface.paving_start-surface.paving_length),my(2*r));c.stroke();
-  c.strokeStyle='#B45309';c.lineWidth=3;c.beginPath();c.moveTo(mx(surface.bump_x),my(-5));c.lineTo(mx(surface.bump_x),my(5));c.stroke();
-  // c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
-  c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);
-  
+  const zones=[
+    {segment:'upper',start:surface.paving_start,end:surface.paving_start+surface.paving_length,type:'paving'},
+    {segment:'lower',start:surface.bump_x-surface.bump_length/2,end:surface.bump_x+surface.bump_length/2,type:'bump'},
+    {segment:'lower',start:surface.crack_x-2,end:surface.crack_x+2,type:'crack'},
+    ...(s.config.extra_surfaces||[])
+  ];
+  const colors={paving:'#94A3B8',bump:'#B45309',crack:'#7C3AED'};
+  for(const zone of zones){
+    if(!colors[zone.type])continue;
+    // The upper road link is rotated pi around (straight, 2*radius).
+    const x0=zone.segment==='upper'?l-zone.end:zone.start;
+    const x1=zone.segment==='upper'?l-zone.start:zone.end;
+    const y=zone.segment==='upper'?2*r:0;
+    const center=mx((x0+x1)/2),width=Math.max(2,(x1-x0)*scale);
+    c.fillStyle=colors[zone.type];
+    c.fillRect(center-width/2,my(y+t.width/2),width,t.width*scale);
+  }
+  stadium();c.strokeStyle='#64748B';c.lineWidth=.7;c.setLineDash([3,4]);c.stroke();c.setLineDash([]);
+  const paving=zones.filter(z=>z.type==='paving');
+  const pavingLength=paving.reduce((sum,z)=>sum+z.end-z.start,0);
+  c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';
+  // c.fillText('PAVING '+paving.length+' ZONA · '+pavingLength.toFixed(0)+' m',w/2,my(2*r)-12);
+  c.fillText('LINTASAN '+t.length.toFixed(0)+' m',w/2,h/2);
+
   for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#DD6B20';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}
   c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#01416B';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();
 }
@@ -134,7 +153,6 @@ function render(s){
   $('heading').textContent='ARAH '+heading.toFixed(0).padStart(3,'0')+'° · '+['UTARA','TIMUR','SELATAN','BARAT'][Math.round(heading/90)%4];
   $('gpsText').textContent=s.gps?s.gps.latitude.toFixed(6)+' / '+s.gps.longitude.toFixed(6):'GPS · menunggu posisi';
   $('progress').style.width=(100*s.track_progress)+'%';
-  $('trackLabel').textContent='Arena oval · '+s.config.track.length.toFixed(0)+' m / putaran';
   $('fps').textContent=s.vision.fps.toFixed(1)+' FPS';$('latency').textContent=s.vision.latency_ms.toFixed(1)+' ms / frame';
   $('visionFlag').textContent=!s.options.vision?'VISION NONAKTIF':s.vision.detections.length?'DUGAAN LUBANG TERDETEKSI':'TIDAK ADA DETEKSI';$('visionFlag').classList.toggle('warn',s.vision.detections.length>0);
   renderImu(s);
@@ -148,12 +166,33 @@ function render(s){
   $('syncStatus').textContent=!s.options.online?'● Offline · cache tetap aktif':s.sync.error?'● Server belum tersambung':'● Sinkron · '+s.sync.ms.toFixed(0)+' ms';
   for(const option of ['vision','imu','database','online']){const input=$('opt-'+option);if(document.activeElement!==input)input.checked=s.options[option];}
   $('auto').classList.toggle('active',s.options.autopilot);$('auto').textContent=s.options.autopilot?'Ⅱ Hentikan demo':'▷ Demo otomatis';
-  $('health').textContent=Object.entries(s.health).map(([k,v])=>k.toUpperCase()+' '+(v?'●':'○')).join('  ');
+  const healthLabel=$('health');
+  if(healthLabel)healthLabel.textContent=Object.entries(s.health).map(([k,v])=>k.toUpperCase()+' '+(v?'●':'○')).join('  ');
   const key=s.events[0]?.wall+':'+s.events.length;
   if(key!==lastEventKey){lastEventKey=key;$('events').innerHTML=s.events.map(e=>`<div class="event ${esc(e.level)}"><time>${esc(e.time)}</time><div><strong>${esc(e.kind)}</strong><p>${esc(e.message)}</p></div></div>`).join('');}
   drawChart(s);drawMap(s);
 }
-async function poll(){try{const r=await fetch('/api/state');if(!r.ok)throw Error('server');state=await r.json();render(state);}catch(e){$('connection').textContent='DASHBOARD TERPUTUS';$('liveDot').classList.remove('ready');$('alertTitle').textContent='Koneksi terputus';$('alertDetail').textContent='Periksa terminal launcher. Sepeda direm otomatis.';}setTimeout(poll,150);}
+async function poll(){
+  try{
+    let nextState;
+    try{
+      const response=await fetch('/api/state');
+      if(!response.ok)throw Error('HTTP '+response.status);
+      nextState=await response.json();
+    }catch(error){
+      console.error('Gagal mengambil status simulasi:',error);
+      $('connection').textContent='DASHBOARD TERPUTUS';$('liveDot').classList.remove('ready');
+      $('alertTitle').textContent='Koneksi terputus';
+      $('alertDetail').textContent='Periksa terminal launcher. Status sensor belum dapat diperbarui.';
+      return;
+    }
+    state=nextState;
+    try{render(state);}catch(error){
+      console.error('Gagal menggambar dashboard:',error);
+      $('connection').textContent='GANGGUAN TAMPILAN';
+    }
+  }finally{setTimeout(poll,150);}
+}
 setInterval(()=>$('clock').textContent=new Date().toLocaleTimeString('id-ID',{hour12:false}).replaceAll('.',':'),1000);
 poll();
 
