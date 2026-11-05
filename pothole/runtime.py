@@ -270,8 +270,9 @@ class Runtime:
                     target=math.atan2(ty-self.pose['y'],tx-self.pose['x'])
                     error=math.atan2(math.sin(target-yaw),math.cos(target-yaw))
                     curvature=2*math.sin(error)/max(1,math.hypot(tx-self.pose['x'],ty-self.pose['y']))
+                    steer_limit=min(.48,math.atan(1.8*1.16/max(self.pose['speed']**2,.01)))
                     cmd={'throttle':max(-.4,min(1,(3-self.pose['speed'])*.8+.12)),
-                         'steer':max(-1,min(1,math.atan(1.16*curvature)/.48)),'brake':0.}
+                         'steer':max(-1,min(1,math.atan(1.16*curvature)/steer_limit)),'brake':0.}
                 elif now-self.last_input>.5 or self.imu['calibrating']:
                     cmd={'throttle':0,'steer':0,'brake':1}
                 msg=Twist()
@@ -346,7 +347,8 @@ class Runtime:
                 'track_progress':track_project(self.pose['x'],self.pose['y'],self.cfg['track'])/track_length(self.cfg['track']),
                 'config':{'origin':self.cfg['origin'],'imu':self.cfg['imu'],'warning':self.cfg['warning'],
                           'track':dict(self.cfg['track'],length=track_length(self.cfg['track'])),
-                          'surfaces':self.cfg['surfaces']}}
+                          'surfaces':self.cfg['surfaces'],
+                          'extra_surfaces':self.cfg.get('extra_surfaces',[])}}
 
     def close(self):
         self.stop.set()
