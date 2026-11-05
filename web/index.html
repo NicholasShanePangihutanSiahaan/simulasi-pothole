@@ -14,7 +14,7 @@
     <section class="hero panel">
       <img id="mainCamera" src="/stream/chase" alt="Kamera mengikuti sepeda di lintasan Gazebo">
       <div class="hero-shade"></div>
-      <div class="hero-top"><div><span class="live-tag">● LIVE</span><span class="location-tag" id="trackLabel">Arena oval · menunggu data lintasan</span></div><button id="cameraSwitch" class="glass">↻ Ganti kamera</button></div>
+      <div class="hero-top"><div><span class="live-tag">● LIVE</span></div><button id="cameraSwitch" class="glass">↻ Ganti kamera</button></div>
       <div id="cameraWaiting" class="camera-waiting">Menunggu gambar dari Gazebo…<small>Inisialisasi dunia dan kamera dapat memerlukan 20–40 detik.</small></div>
       <div id="roadAlert" class="road-alert" hidden><span>△</span><div><strong id="roadAlertTitle">Jalan rusak di depan</strong><small id="roadAlertSub"></small></div></div>
       <div class="hero-bottom"><div class="speed"><span id="speed">0.0</span><div>km/jam<small id="motion">BERHENTI</small></div></div><div class="ride-coordinates"><span id="gpsText">GPS · menunggu posisi</span><small id="heading">ARAH 090° · TIMUR</small></div></div>
@@ -22,14 +22,14 @@
     </section>
     <div class="sensor-grid">
       <!-- <section class="panel vision-panel"><div class="panel-head"><h2><span class="number">01</span> Vision</h2><span id="fps" class="metric-label">— FPS</span></div><div class="vision-view"><img src="/stream/camera" alt="Citra kamera depan dengan kotak deteksi OpenCV"><span id="visionFlag" class="image-tag">MENUNGGU KAMERA</span></div><div class="panel-foot"><span>OpenCV · baseline simulasi</span><span id="latency">— ms / frame</span></div></section> -->
-      <section class="panel vision-panel"><div class="panel-head"><h2><span class="number">01</span> Vision</h2><span id="fps" class="metric-label">— FPS</span></div><div class="vision-view"><img src="/stream/camera" alt="Citra kamera depan dengan kotak deteksi OpenCV"><span id="visionFlag" class="image-tag">MENUNGGU KAMERA</span></div><div class="panel-foot"><span id="latency">— ms / frame</span></div></section>
+      <section class="panel vision-panel"><div class="panel-head"><h2><span class="number">01</span> Vision</h2><span id="fps" class="metric-label">— FPS</span></div><div class="vision-view"><img src="/stream/camera" alt="Citra kamera depan dengan kotak deteksi OpenCV"><span id="visionFlag" class="image-tag">MENUNGGU KAMERA</span></div><div class="panel-foot"><span id="latency" style="display:flex;justify-content:flex-end;width:100%;">— ms / frame</span></div></section>
       <section class="panel imu-panel"><div class="panel-head"><h2><span class="number">02</span> Respons IMU</h2><span class="metric-label">100 Hz SIM</span></div><div class="imu-reading"><strong id="az">0.00</strong><span>m/s²<small>percepatan vertikal tanpa gravitasi</small></span><span id="imuFlag" class="pill">KALIBRASI</span></div><canvas id="chart" aria-label="Grafik percepatan IMU; garis putus-putus adalah syarat puncak guncangan, titik jingga adalah pothole terkonfirmasi"></canvas><div class="panel-foot imu-legend"><span><i class="legend teal"></i> aZ <i class="legend orange"></i> <span id="imuThreshold">ambang puncak</span></span><span id="std" title="Statistik informasi, bukan syarat keputusan pothole">σ 0.00 · ΔZ 0.00 (info)</span></div><div class="imu-explanation"><p id="imuDecision" aria-live="polite">Menunggu kalibrasi sensor.</p><small>Melewati garis belum berarti pothole. Pola turun, integral guncangan, dan benturan naik juga diperiksa. Titik jingga menandai pola pothole terkonfirmasi.</small></div></section>
     </div>
     <div class="drive-bar panel"><span id="controller">⌨ KEYBOARD</span><div><kbd>W</kbd> kayuh <kbd>A</kbd><kbd>D</kbd> belok <kbd>S</kbd> rem <kbd>SPACE</kbd> berhenti</div><button id="auto" class="subtle">▷ Demo otomatis</button></div>
   </section>
   <aside>
     <section id="alertPanel" class="panel alert-panel"><div class="alert-symbol" id="alertSymbol">✓</div><div><p class="eyebrow">BUZZER & LED</p><h2 id="alertTitle">Menunggu sensor</h2><p id="alertDetail">Aktifkan suara untuk mendengar peringatan.</p></div><span class="led" id="led"></span></section>
-    <section class="panel map-panel"><div class="panel-head"><h2><span class="number">03</span> Peta tersinkron</h2><span class="metric-label" id="cacheCount">0 TITIK</span></div><canvas id="map" aria-label="Peta lokal lintasan, sepeda, dan lokasi kerusakan dari server"></canvas><div class="map-legend"><span><i class="legend teal"></i> Sepeda</span><span><i class="legend orange"></i> Database</span></div><div class="sync-row"><span id="syncStatus">● Menghubungkan server</span><a href="/api/export.csv" download="jalan-rusak.csv">Ekspor CSV ↗</a></div></section>
+    <section class="panel map-panel"><div class="panel-head"><h2><span class="number">03</span> Peta tersinkron</h2><span class="metric-label" id="cacheCount">0 TITIK</span></div><canvas id="map" aria-label="Peta lokal lintasan, sepeda, dan lokasi kerusakan dari server"></canvas><div class="map-legend"><span><i class="legend teal"></i> Sepeda</span><span><i class="legend orange"></i> Database</span></div><div class="surface-legend" aria-label="Legenda permukaan jalan"><span><i class="surface-key paving"></i>Paving</span><span><i class="surface-key bump"></i>Polisi tidur</span><span><i class="surface-key crack"></i>Retakan</span></div><div class="sync-row"><span id="syncStatus">● Menghubungkan server</span><a href="/api/export.csv" download="jalan-rusak.csv">Ekspor CSV ↗</a></div></section>
     <section class="panel control-panel"><div class="panel-head"><h2>Meja demonstrasi</h2><span class="metric-label">INTERAKTIF</span></div><div class="toggle-grid">
       <label><span>Vision</span><input id="opt-vision" type="checkbox" checked><i></i></label><label><span>Deteksi IMU</span><input id="opt-imu" type="checkbox" checked><i></i></label>
       <label><span>Peringatan peta</span><input id="opt-database" type="checkbox" checked><i></i></label><label><span>Jaringan online</span><input id="opt-online" type="checkbox" checked><i></i></label>
@@ -47,7 +47,8 @@
     <section class="panel event-panel"><div class="panel-head"><h2>Jejak sistem</h2><span class="metric-label">REAL-TIME</span></div><div id="events"><p class="empty">Peristiwa sensor dan sinkronisasi muncul di sini.</p></div></section>
   </aside>
 </main>
-<footer><span><span class="footer-dot"></span> PITHOLE · CAPSTONE B-08 · SIMULASI SEPEDA</span><span>IMU → Sistem Mitigasi <em>·</em> Vision → Preventif </span><span id="health">MEMUAT SENSOR</span></footer>
+<!-- <footer><span><span class="footer-dot"></span> PITHOLE · CAPSTONE B-08 · SIMULASI SEPEDA</span><span>IMU → Sistem Mitigasi <em>·</em> Vision → Preventif </span><span id="health">MEMUAT SENSOR</span></footer> -->
+<footer style="display:flex;justify-content:center;align-items:center;width:100%;"><span>IMU → Sistem Mitigasi <em>·</em> Vision → Preventif </span></footer>
 <div id="toast" role="status" hidden></div>
 <script src="/app.js"></script>
 </body></html>
