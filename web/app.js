@@ -117,7 +117,9 @@ function drawMap(s){
   const surface=s.config.surfaces;
   c.strokeStyle='#94A3B8';c.lineWidth=t.width*scale;c.beginPath();c.moveTo(mx(l-surface.paving_start),my(2*r));c.lineTo(mx(l-surface.paving_start-surface.paving_length),my(2*r));c.stroke();
   c.strokeStyle='#B45309';c.lineWidth=3;c.beginPath();c.moveTo(mx(surface.bump_x),my(-5));c.lineTo(mx(surface.bump_x),my(5));c.stroke();
-  c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
+  // c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);c.fillText('ASPHALT · RETAKAN · POLISI TIDUR',w/2,h-5);
+  c.fillStyle='#475569';c.font='8px monospace';c.textAlign='center';c.fillText('PAVING 60 m',mx(l/2),my(2*r)-12);c.fillText('OVAL '+t.length.toFixed(0)+' m',w/2,h/2);
+  
   for(const p of s.potholes){const x=(p.longitude-s.config.origin.longitude)*Math.PI/180*6378137*Math.cos(s.config.origin.latitude*Math.PI/180),y=(p.latitude-s.config.origin.latitude)*Math.PI/180*6378137;c.fillStyle='#DD6B20';c.beginPath();c.arc(mx(x),my(y),3.5,0,Math.PI*2);c.fill();}
   c.save();c.translate(mx(s.pose.x),my(s.pose.y));c.rotate(-s.pose.yaw);c.fillStyle='#01416B';c.beginPath();c.moveTo(7,0);c.lineTo(-5,-4);c.lineTo(-3,0);c.lineTo(-5,4);c.closePath();c.fill();c.restore();
 }
