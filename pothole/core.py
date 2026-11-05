@@ -167,7 +167,10 @@ def nearby_warning(x, y, yaw, speed, steer, records, origin, cfg):
     if speed < cfg['min_speed']:
         return None
     radius = min(cfg['radius'], max(6.0, speed*cfg['lookahead_seconds']))
-    curvature = math.tan(steer*.48)/1.16
+    # Match the speed-dependent target limit in SteeringControl.hh.
+    limit = min(.48, math.atan(1.8*1.16/max(speed*speed,.01)))
+    delta = max(-1.,min(1.,steer))*limit
+    curvature = math.tan(delta)/1.16
     best = None
     for row in records:
         hx,hy = to_xy(row['latitude'],row['longitude'],origin)
