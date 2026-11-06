@@ -3,12 +3,12 @@ const $ = id => document.getElementById(id);
 let state=null, sound=null, soundOn=false, lastBeep=0, mainView='chase', focused=true;
 const keys=new Set(), touch=new Set();
 let toastTimer, previousGameButtons=[], gamepadName='', smoothSteer=0;
-const steeringDefaults={sensitivity:55,response:45};
-function savedNumber(key,fallback){const value=Number(localStorage.getItem(key));return Number.isFinite(value)?value:fallback;}
+const steeringDefaults={sensitivity:100,response:45};
+function savedNumber(key,fallback){const saved=localStorage.getItem(key);if(saved===null)return fallback;const value=Number(saved);return Number.isFinite(value)?value:fallback;}
 function steeringSettings(){return {sensitivity:Number($('steerSensitivity').value)/100,response:Number($('steerResponse').value)/100};}
 function responseLabel(value){return value<.34?'Halus':value<.67?'Sedang':'Cepat';}
 function showSteeringSettings(){const s=steeringSettings();$('steerSensitivityValue').textContent=Math.round(s.sensitivity*100)+'% · '+(27.5*s.sensitivity).toFixed(0)+'°';$('steerResponseValue').textContent=responseLabel(s.response);}
-$('steerSensitivity').value=Math.max(20,Math.min(100,savedNumber('pothole-steer-sensitivity',steeringDefaults.sensitivity)));
+$('steerSensitivity').value=Math.max(20,Math.min(125,savedNumber('pothole-steer-sensitivity',steeringDefaults.sensitivity)));
 $('steerResponse').value=Math.max(10,Math.min(100,savedNumber('pothole-steer-response',steeringDefaults.response)));
 for(const id of ['steerSensitivity','steerResponse'])$(id).oninput=()=>{localStorage.setItem('pothole-'+(id==='steerSensitivity'?'steer-sensitivity':'steer-response'),$(id).value);showSteeringSettings();};
 $('resetSteering').onclick=()=>{$('steerSensitivity').value=steeringDefaults.sensitivity;$('steerResponse').value=steeringDefaults.response;localStorage.setItem('pothole-steer-sensitivity',steeringDefaults.sensitivity);localStorage.setItem('pothole-steer-response',steeringDefaults.response);showSteeringSettings();toast('Setelan kemudi kembali ke standar.');};
