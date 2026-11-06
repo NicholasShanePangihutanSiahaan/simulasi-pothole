@@ -61,7 +61,7 @@ class BicycleSystem final : public gz::sim::System,
     std::lock_guard<std::mutex> lock(mutex);
     throttle = std::clamp(msg.linear().x(), -1.0, 1.0);
     brake = std::clamp(msg.linear().y(), 0.0, 1.0);
-    steer = std::clamp(msg.angular().z(), -1.0, 1.0);
+    steer = std::clamp(msg.angular().z(), -1.25, 1.25);
     commandTime = std::chrono::steady_clock::now();
   }
   void Reset(const gz::msgs::Pose &msg) {
@@ -116,7 +116,7 @@ class BicycleSystem final : public gz::sim::System,
         std::chrono::duration<double>(info.dt).count());
     const double desiredYawRate = v * std::tan(delta) / 1.16;
     // Virtual rider balances even at a standstill. Roll lean is modest for an exhibit.
-    const double lean = std::clamp(-std::atan(v * desiredYawRate / 9.81), -.20, .20);
+    const double lean = std::clamp(-std::atan(v * desiredYawRate / 9.81), -.25, .25);
     const double rollTorque = 3500 * (lean - pose.Rot().Roll()) - 350 * bodyW.X();
     // Track turn rate directly: no accumulated heading target to keep turning
     // after release, or fight a requested reversal when the tires lag behind.
