@@ -3,7 +3,7 @@
 #include <cmath>
 
 namespace capstone {
-// Limits match the virtual rider's 0.20 rad lean envelope (about 2 m/s²).
+// Limits match the virtual rider's 0.25 rad lean envelope (about 2.5 m/s²).
 class SteeringControl {
  public:
   double angle{0};
@@ -13,11 +13,14 @@ class SteeringControl {
         std::max(speed * speed, .01)));
     // Scale the full input range into the allowed angle, rather than
     // saturating small inputs at high speed.
-    const double target = std::clamp(input, -1., 1.) * limit;
+    const double extendedLimit = std::min(.60, std::atan(2.3 * 1.16 /
+        std::max(speed * speed, .01)));
+    const double target = std::clamp(std::clamp(input, -1.25, 1.25) * limit,
+                                    -extendedLimit, extendedLimit);
     // Slew in simulation time, independent of browser and physics frame rates.
     const double step = .9 * std::clamp(dt, 0., .05);
     angle += std::clamp(target - angle, -step, step);
-    angle = std::clamp(angle, -limit, limit);
+    angle = std::clamp(angle, -extendedLimit, extendedLimit);
     return angle;
   }
 };
