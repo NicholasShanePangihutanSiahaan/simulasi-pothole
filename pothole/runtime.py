@@ -184,7 +184,8 @@ class Runtime:
         if not all(math.isfinite(v) for v in values.values()):
             raise ValueError('Kontrol harus bilangan hingga')
         with self.lock:
-            self.command={key:max(0 if key=='brake' else -1,min(1,v)) for key,v in values.items()}
+            self.command={key:max(0 if key=='brake' else (-1.25 if key=='steer' else -1),
+                                  min(1.25 if key=='steer' else 1,v)) for key,v in values.items()}
             self.last_input=time.monotonic()
             self.last_client=self.last_input
             if any(abs(self.command[k])>.08 for k in ('throttle','steer')) or self.command['brake']>.1:
