@@ -230,7 +230,7 @@ def bicycle():
     fork += tube('handlebar',(.45,-.30,.29),(.45,.30,.29),.023,dark)
     fork += tube('stem',(.4,0,.14),(.45,0,.29),.028,silver)
     result += '<link name="fork">'+inertia(1,.08,.08,.08)+fork+'</link>'
-    result += '<joint name="steering" type="revolute"><pose relative_to="frame">.4 0 .14 0 0 0</pose><parent>frame</parent><child>fork</child><axis><xyz>0 0 1</xyz><limit><lower>-.5</lower><upper>.5</upper><effort>250</effort></limit><dynamics><damping>.8</damping></dynamics></axis></joint>'
+    result += '<joint name="steering" type="revolute"><pose relative_to="frame">.4 0 .14 0 0 0</pose><parent>frame</parent><child>fork</child><axis><xyz>0 0 1</xyz><limit><lower>-.65</lower><upper>.65</upper><effort>250</effort></limit><dynamics><damping>.8</damping></dynamics></axis></joint>'
     for label, x, parent in [('rear',-.58,'frame'),('front',.58,'fork')]:
         visuals = mesh('tire','tire.dae')
         for i in range(16):
